@@ -16,7 +16,7 @@ const departmentSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      maxlength: [500, "Description can not be more than 500 characters"],
+      // maxlength: [500, "Description can not be more than 500 characters"],
     },
     image: {
       type: String,

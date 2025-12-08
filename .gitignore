@@ -49,3 +49,6 @@ Thumbs.db
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Ignored Public folder
+public/

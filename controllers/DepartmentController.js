@@ -1,5 +1,6 @@
 const Department = require("../models/Department");
-
+const fs = require("fs");
+const path = require("path");
 // @desc    Get all departments
 // @route   GET /api/departments
 // @access  Public
@@ -92,6 +93,49 @@ exports.deleteDepartment = async (req, res) => {
     await department.deleteOne();
     res.status(200).json({ success: true, message: "Department deleted" });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.seedDepartments = async (req, res) => {
+  try {
+    // 1. You can either read from the JSON file created in step 2:
+    // const data = JSON.parse(
+    //   fs.readFileSync(path.join(__dirname, '../data/departments.json'), 'utf-8')
+    // );
+
+    // 2. OR you can just accept the array via the Request Body (Postman):
+    const data = req.body;
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of departments",
+      });
+    }
+
+    // Option: Clear existing departments to avoid duplicate key errors?
+    // await Department.deleteMany({});
+
+    // Use insertMany for bulk creation
+    // ordered: false ensures that if one fails (e.g. duplicate), the others still insert
+    const departments = await Department.insertMany(data, { ordered: false });
+
+    res.status(201).json({
+      success: true,
+      count: departments.length,
+      data: departments,
+    });
+  } catch (error) {
+    // Check if error is due to duplicates (code 11000)
+    if (error.code === 11000 || error.writeErrors) {
+      // If using insertMany with ordered:false, Mongoose throws an error containing the inserted docs and the errors
+      return res.status(207).json({
+        success: true,
+        message: "Process completed with some duplicate errors skipped.",
+        inserted: error.insertedDocs ? error.insertedDocs.length : "Unknown",
+      });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 };

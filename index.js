@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require("path");
 
 // Load env vars
 dotenv.config();
@@ -20,7 +21,9 @@ app.use(cors());
 const port = process.env.PORT || 5000;
 
 // Body parser (Crucial for req.body to work in controllers)
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // Mount routers
 app.use("/api/auth", authRoutes);

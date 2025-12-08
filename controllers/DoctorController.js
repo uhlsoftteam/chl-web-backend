@@ -1,4 +1,25 @@
 const Doctor = require("../models/Doctor");
+const fs = require("fs");
+const path = require("path");
+
+const getImagePath = (req) => {
+  return req.file ? `/uploads/doctors/${req.file.filename}` : null;
+};
+
+// Helper to delete file from filesystem
+const deleteLocalFile = (filePath) => {
+  // 1. Construct the full path on your hard drive
+  // Assuming your structure is: root/public/uploads/...
+  // and this controller is in: root/backend/controllers/
+  const fullPath = path.join(__dirname, "../../public", filePath);
+
+  // 2. Check if file exists and delete it
+  if (fs.existsSync(fullPath)) {
+    fs.unlink(fullPath, (err) => {
+      if (err) console.error("Error deleting file:", err);
+    });
+  }
+};
 
 exports.getDoctors = async (req, res) => {
   try {
@@ -70,15 +91,18 @@ exports.getDoctorBySlug = async (req, res) => {
 // @access  Private (Admin)
 exports.createDoctor = async (req, res) => {
   try {
+    // IF a file was uploaded, set the image field in req.body
+    if (req.file) {
+      req.body.image = getImagePath(req);
+    }
+
     const doctor = await Doctor.create(req.body);
     res.status(201).json({ success: true, data: doctor });
   } catch (error) {
-    // Check for duplicate slug error (MongoDB code 11000)
     if (error.code === 11000 && error.keyPattern.slug) {
       return res.status(400).json({
         success: false,
-        error:
-          "A doctor with this name/slug already exists. Please modify the slug manually.",
+        error: "A doctor with this name/slug already exists.",
       });
     }
     res.status(400).json({ success: false, error: error.message });
@@ -90,10 +114,31 @@ exports.createDoctor = async (req, res) => {
 // @access  Private (Admin)
 exports.updateDoctor = async (req, res) => {
   try {
-    const doctor = await Doctor.findByIdAndUpdate(req.params.id, req.body, {
+    let newData = { ...req.body };
+
+    // 1. If a NEW image is uploaded
+    if (req.file) {
+      // Set the new image path
+      newData.image = `/uploads/doctors/${req.file.filename}`;
+
+      // 2. Find the EXISTING doctor to get the OLD image path
+      const oldDoctor = await Doctor.findById(req.params.id);
+
+      // 3. Delete the old image (if it exists and isn't the default)
+      if (
+        oldDoctor &&
+        oldDoctor.image &&
+        !oldDoctor.image.includes("default-doctor.jpg") // Don't delete the default placeholder
+      ) {
+        deleteLocalFile(oldDoctor.image);
+      }
+    }
+
+    const doctor = await Doctor.findByIdAndUpdate(req.params.id, newData, {
       new: true,
       runValidators: true,
     });
+
     if (!doctor) {
       return res
         .status(404)
@@ -116,7 +161,15 @@ exports.deleteDoctor = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Doctor not found" });
     }
+
+    // 1. Delete the image file associated with this doctor
+    if (doctor.image && !doctor.image.includes("default-doctor.jpg")) {
+      deleteLocalFile(doctor.image);
+    }
+
+    // 2. Delete the database record
     await doctor.deleteOne();
+
     res.status(200).json({ success: true, message: "Doctor deleted" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -155,6 +208,49 @@ exports.reorderDoctors = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.seedDoctors = async (req, res) => {
+  try {
+    // 1. You can either read from the JSON file created in step 2:
+    // const data = JSON.parse(
+    //   fs.readFileSync(path.join(__dirname, '../data/departments.json'), 'utf-8')
+    // );
+
+    // 2. OR you can just accept the array via the Request Body (Postman):
+    const data = req.body;
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of doctors",
+      });
+    }
+
+    // Option: Clear existing departments to avoid duplicate key errors?
+    // await Department.deleteMany({});
+
+    // Use insertMany for bulk creation
+    // ordered: false ensures that if one fails (e.g. duplicate), the others still insert
+    const docotrs = await Doctor.insertMany(data, { ordered: false });
+
+    res.status(201).json({
+      success: true,
+      count: docotrs.length,
+      data: docotrs,
+    });
+  } catch (error) {
+    // Check if error is due to duplicates (code 11000)
+    if (error.code === 11000 || error.writeErrors) {
+      // If using insertMany with ordered:false, Mongoose throws an error containing the inserted docs and the errors
+      return res.status(207).json({
+        success: true,
+        message: "Process completed with some duplicate errors skipped.",
+        inserted: error.insertedDocs ? error.insertedDocs.length : "Unknown",
+      });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 };
