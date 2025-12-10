@@ -4,6 +4,7 @@ const {
   getPackageBySlug,
   createPackage,
   updatePackage,
+  seedPackages,
 } = require("../controllers/PackageController"); // Path to your controller
 
 const router = express.Router();
@@ -18,5 +19,7 @@ router.route("/:slug").get(getPackageBySlug); // GET /api/v1/packages/executive-
 router.route("/").post(createPackage); // POST /api/v1/packages
 
 router.route("/:id").put(updatePackage); // PUT /api/v1/packages/:id
+
+router.route("/seed").post(seedPackages);
 
 module.exports = router;

@@ -10,12 +10,16 @@ const PackageSchema = new mongoose.Schema(
       unique: true,
     },
     packageSlug: {
-      // URL-friendly identifier for routes/SEO
       type: String,
       required: true,
       trim: true,
       lowercase: true,
       unique: true,
+    },
+    // Added packageNature field
+    packageNature: {
+      type: String, // e.g., "Corporate", "HEALTH SCREENING", "UHL STAFF"
+      trim: true,
     },
     price: {
       type: Number,
@@ -23,12 +27,10 @@ const PackageSchema = new mongoose.Schema(
       min: 0,
     },
     is_opd: {
-      // True if it's an OPD package
       type: Boolean,
       default: true,
     },
     is_ipd: {
-      // True if it's an IPD package
       type: Boolean,
       default: false,
     },
@@ -44,20 +46,21 @@ const PackageSchema = new mongoose.Schema(
     // --- Target Audience Info ---
     targetAudience: {
       ageRange: {
-        type: String, // e.g., "20-45"
+        type: String,
         trim: true,
       },
       gender: {
-        type: String, // e.g., "Female"
+        type: String,
         enum: ["Male", "Female", "All"],
         required: true,
       },
+      // Department is optional and will be skipped in JSON if not present
       department: {
-        type: String, // e.g., "Internal Medicine"
+        type: String,
         trim: true,
       },
       preCondition: {
-        type: String, // e.g., "OPD"
+        type: String,
         trim: true,
       },
     },
@@ -69,29 +72,25 @@ const PackageSchema = new mongoose.Schema(
 
     // --- Media and SEO Fields ---
     packageImage: {
-      // The main image for the package
       url: String,
       altText: String,
     },
 
-    // SEO Fields
     seo: {
       metaTitle: {
-        // Appears in the browser tab and search results
         type: String,
         trim: true,
         maxlength: 70,
       },
       metaDescription: {
-        // The snippet under the title in search results
         type: String,
         trim: true,
         maxlength: 160,
       },
-      keywords: [String], // Keywords for search engines
+      keywords: [String],
     },
   },
   { timestamps: true }
-); // Automatically adds createdAt and updatedAt fields
+);
 
 module.exports = mongoose.model("Package", PackageSchema);
