@@ -31,7 +31,6 @@ const doctorSchema = new mongoose.Schema(
     },
     slug: {
       type: String,
-      unique: true,
       lowercase: true,
       index: true,
     },

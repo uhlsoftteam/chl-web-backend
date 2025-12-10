@@ -1,5 +1,6 @@
 const Doctor = require("../models/Doctor");
 const fs = require("fs");
+const { default: mongoose } = require("mongoose");
 const path = require("path");
 
 const getImagePath = (req) => {
@@ -68,11 +69,27 @@ exports.getDoctorById = async (req, res) => {
 
 exports.getDoctorBySlug = async (req, res) => {
   try {
-    // UPDATE: Added .populate()
-    const doctor = await Doctor.findOne({
-      slug: req.params.slug,
-      isActive: true,
-    }).populate("department");
+    const param = req.params.slug;
+
+    // 1. Extract the last 24 characters (MongoDB ObjectIds are 24 hex chars)
+    // Input: "tunaggina-afrin-khan19-693663696bb6027feee1c318"
+    // Extracted: "693663696bb6027feee1c318"
+    const possibleId = param.slice(-24);
+
+    let doctor = null;
+
+    // 2. If it looks like a valid ID, search by ID first (Most reliable)
+    if (mongoose.isValidObjectId(possibleId)) {
+      doctor = await Doctor.findById(possibleId).populate("department");
+    }
+
+    // 3. Fallback: If not found by ID (or it was a legacy URL), search by exact slug
+    if (!doctor) {
+      doctor = await Doctor.findOne({
+        slug: param,
+        isActive: true,
+      }).populate("department");
+    }
 
     if (!doctor) {
       return res
@@ -180,7 +197,7 @@ exports.reorderDoctors = async (req, res) => {
   try {
     const { orderedIds } = req.body;
 
-    if (!orderedIds || !Array.isArray(orderedIds)) {
+    if (!orderedIds || !Array.isArray()) {
       return res.status(400).json({
         success: false,
         message: "Please provide an array of ordered IDs",
