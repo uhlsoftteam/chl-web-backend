@@ -108,6 +108,26 @@ exports.getDoctorBySlug = async (req, res) => {
 // @access  Private (Admin)
 exports.createDoctor = async (req, res) => {
   try {
+    // --- FIX START: Parse stringified arrays/objects from FormData ---
+    // Multipart form-data sends everything as strings. We must parse them back to JSON.
+
+    if (req.body.schedules && typeof req.body.schedules === "string") {
+      req.body.schedules = JSON.parse(req.body.schedules);
+    }
+
+    if (req.body.degrees && typeof req.body.degrees === "string") {
+      req.body.degrees = JSON.parse(req.body.degrees);
+    }
+
+    if (req.body.experience && typeof req.body.experience === "string") {
+      req.body.experience = JSON.parse(req.body.experience);
+    }
+
+    if (req.body.seo && typeof req.body.seo === "string") {
+      req.body.seo = JSON.parse(req.body.seo);
+    }
+    // --- FIX END ---
+
     // IF a file was uploaded, set the image field in req.body
     if (req.file) {
       req.body.image = getImagePath(req);
@@ -133,19 +153,30 @@ exports.updateDoctor = async (req, res) => {
   try {
     let newData = { ...req.body };
 
+    // --- FIX START: Parse stringified arrays/objects ---
+    if (newData.schedules && typeof newData.schedules === "string") {
+      newData.schedules = JSON.parse(newData.schedules);
+    }
+    if (newData.degrees && typeof newData.degrees === "string") {
+      newData.degrees = JSON.parse(newData.degrees);
+    }
+    if (newData.experience && typeof newData.experience === "string") {
+      newData.experience = JSON.parse(newData.experience);
+    }
+    if (newData.seo && typeof newData.seo === "string") {
+      newData.seo = JSON.parse(newData.seo);
+    }
+    // --- FIX END ---
+
     // 1. If a NEW image is uploaded
     if (req.file) {
-      // Set the new image path
       newData.image = `/uploads/doctors/${req.file.filename}`;
 
-      // 2. Find the EXISTING doctor to get the OLD image path
       const oldDoctor = await Doctor.findById(req.params.id);
-
-      // 3. Delete the old image (if it exists and isn't the default)
       if (
         oldDoctor &&
         oldDoctor.image &&
-        !oldDoctor.image.includes("default-doctor.jpg") // Don't delete the default placeholder
+        !oldDoctor.image.includes("default-doctor.jpg")
       ) {
         deleteLocalFile(oldDoctor.image);
       }
