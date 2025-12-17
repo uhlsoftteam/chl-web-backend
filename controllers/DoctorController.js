@@ -302,3 +302,60 @@ exports.seedDoctors = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// ... existing code ...
+
+// @desc    Global Search Doctors (Name, Designation, Department Name)
+// @route   GET /api/doctors/search
+// @access  Public
+exports.searchDoctors = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a search query",
+      });
+    }
+
+    // 1. Find Departments that match the search term first
+    // (We need this to search doctors by "Department Name")
+    // We use mongoose.model("Department") to avoid circular dependency issues if you haven't imported it
+    const Department = mongoose.model("Department");
+
+    const matchingDepartments = await Department.find({
+      name: { $regex: query, $options: "i" }, // 'i' = case insensitive
+    }).select("_id");
+
+    const matchingDeptIds = matchingDepartments.map((dept) => dept._id);
+
+    // 2. Find Doctors matching Name, Designation, OR the Department IDs found above
+    const doctors = await Doctor.find({
+      isActive: true, // Only show active doctors
+      $or: [
+        // Match Name
+        { name: { $regex: query, $options: "i" } },
+        // Match Designation
+        { designation: { $regex: query, $options: "i" } },
+        // Match Degrees (Optional: if you want to search 'MBBS' etc)
+        { degrees: { $regex: query, $options: "i" } },
+        // Match Department ID (from the department name search above)
+        { department: { $in: matchingDeptIds } },
+      ],
+    })
+      .populate({
+        path: "department",
+        select: "name slug image",
+      })
+      .sort({ priority: 1, ranking: 1 }); // Maintain your sort order
+
+    res.status(200).json({
+      success: true,
+      count: doctors.length,
+      data: doctors,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

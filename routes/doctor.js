@@ -8,6 +8,7 @@ const {
   getDoctorBySlug,
   reorderDoctors,
   seedDoctors,
+  searchDoctors,
 } = require("../controllers/DoctorController");
 
 const { protect, isAdmin } = require("../middleware/isAdmin");
@@ -16,6 +17,7 @@ const upload = require("../middleware/uploadMiddleware");
 const router = express.Router();
 
 router.get("/", getDoctors);
+router.get("/search", searchDoctors);
 router.get("/:slug", getDoctorBySlug);
 
 // Admin routes
