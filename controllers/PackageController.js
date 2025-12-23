@@ -112,3 +112,35 @@ exports.seedPackages = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+exports.searchPackages = async (req, res, next) => {
+  try {
+    const { keyword, gender, packageNature, is_opd } = req.query;
+    let filter = {};
+
+    // 1. GLOBAL TEXT SEARCH (Search keyword across multiple fields)
+    if (keyword) {
+      filter.$or = [
+        { packageName: { $regex: keyword, $options: "i" } },
+        { packageNature: { $regex: keyword, $options: "i" } },
+        { details: { $regex: keyword, $options: "i" } },
+        { "targetAudience.department": { $regex: keyword, $options: "i" } },
+      ];
+    }
+
+    // 2. SPECIFIC FILTERS (Exact matches for dropdowns/toggles)
+    if (gender) filter["targetAudience.gender"] = gender;
+    if (packageNature) filter.packageNature = packageNature;
+    if (is_opd) filter.is_opd = is_opd === "true";
+
+    const packages = await Package.find(filter);
+
+    res.status(200).json({
+      success: true,
+      count: packages.length,
+      data: packages,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};

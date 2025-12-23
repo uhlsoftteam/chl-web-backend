@@ -5,12 +5,15 @@ const {
   createPackage,
   updatePackage,
   seedPackages,
+  searchPackages,
 } = require("../controllers/PackageController"); // Path to your controller
 
 const router = express.Router();
 
 // Public routes for fetching data
 router.route("/").get(getPackages); // GET /api/v1/packages
+
+router.get("/search", searchPackages);
 
 router.route("/:slug").get(getPackageBySlug); // GET /api/v1/packages/executive-basic-women
 
