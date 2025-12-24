@@ -9,6 +9,7 @@ const {
   reorderDoctors,
   seedDoctors,
   searchDoctors,
+  bulkUpdateDoctors,
 } = require("../controllers/DoctorController");
 
 const { protect, isAdmin } = require("../middleware/isAdmin");
@@ -36,5 +37,6 @@ router.put("/:id", upload.single("image"), updateDoctor);
 router.delete("/:id", protect, isAdmin, deleteDoctor);
 router.patch("/reorder", protect, isAdmin, reorderDoctors);
 router.route("/seed").post(seedDoctors);
+router.route("/bulk-update").post(bulkUpdateDoctors);
 
 module.exports = router;

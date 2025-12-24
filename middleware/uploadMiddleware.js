@@ -5,11 +5,21 @@ const path = require("path");
 // Set storage engine
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Make sure this folder exists in your project root: public/uploads/doctors
-    cb(null, "./public/uploads/doctors");
+    let folder = "others"; // Default folder
+
+    // Check the URL to determine the folder
+    if (req.baseUrl.includes("doctors")) {
+      folder = "doctors";
+    } else if (req.baseUrl.includes("blogs")) {
+      folder = "blogs";
+    } else if (req.baseUrl.includes("packages")) {
+      folder = "packages";
+    }
+
+    const uploadPath = `./public/uploads/${folder}`;
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    // Generate: doctor-slug-timestamp.ext OR fieldname-timestamp.ext
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(
       null,

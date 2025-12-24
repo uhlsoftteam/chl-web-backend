@@ -74,6 +74,12 @@ const doctorSchema = new mongoose.Schema(
     experience: {
       type: [String],
     },
+    academic: {
+      type: [String],
+    },
+    introduction: {
+      type: String,
+    },
     schedules: [scheduleSchema],
     seo: {
       metaTitle: String,

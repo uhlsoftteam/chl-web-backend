@@ -39,12 +39,23 @@ exports.getBlogBySlug = async (req, res) => {
 // @access  Private (Admin)
 exports.createBlog = async (req, res) => {
   try {
-    // Add user from token to body
+    // 1. Check if file exists and add path to body
+    if (req.file) {
+      // Adjusted to match your static folder config
+      req.body.coverImage = `/uploads/blogs/${req.file.filename}`;
+    }
+
+    // 2. Parse JSON strings back into objects/arrays
+    if (req.body.tags) req.body.tags = JSON.parse(req.body.tags);
+    if (req.body.seo) req.body.seo = JSON.parse(req.body.seo);
+
+    // 3. Set the author (This was where it crashed because req.body was undefined)
     req.body.author = req.user.id;
 
     const blog = await Blog.create(req.body);
     res.status(201).json({ success: true, data: blog });
   } catch (error) {
+    console.error(error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
@@ -55,14 +66,40 @@ exports.createBlog = async (req, res) => {
 exports.updateBlog = async (req, res) => {
   try {
     let blog = await Blog.findById(req.params.id);
-    if (!blog)
+
+    if (!blog) {
       return res
         .status(404)
         .json({ success: false, message: "Blog not found" });
+    }
 
-    // Optional: Ensure only the original author OR an admin can update
-    // For now, since route is isAdmin, we assume admins can edit any blog.
+    // 1. Handle New Image Upload
+    if (req.file) {
+      // If a new file is uploaded, update the path
+      req.body.coverImage = `/uploads/blogs/${req.file.filename}`;
 
+      // OPTIONAL: You could add logic here to delete the OLD file from
+      // the filesystem using the 'fs' module to save server space.
+    }
+
+    // 2. Parse JSON strings (tags and seo)
+    if (req.body.tags) {
+      try {
+        req.body.tags = JSON.parse(req.body.tags);
+      } catch (e) {
+        // Fallback if it's already an array or malformed
+      }
+    }
+
+    if (req.body.seo) {
+      try {
+        req.body.seo = JSON.parse(req.body.seo);
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    // 3. Update the document
     blog = await Blog.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -70,6 +107,7 @@ exports.updateBlog = async (req, res) => {
 
     res.status(200).json({ success: true, data: blog });
   } catch (error) {
+    console.error("Update Error:", error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
