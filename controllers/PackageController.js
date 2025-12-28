@@ -115,16 +115,16 @@ exports.seedPackages = async (req, res) => {
 
 exports.searchPackages = async (req, res, next) => {
   try {
-    const { keyword, gender, packageNature, is_opd } = req.query;
+    const { query, gender, packageNature, is_opd } = req.query;
     let filter = {};
 
-    // 1. GLOBAL TEXT SEARCH (Search keyword across multiple fields)
-    if (keyword) {
+    // 1. GLOBAL TEXT SEARCH (Search query across multiple fields)
+    if (query) {
       filter.$or = [
-        { packageName: { $regex: keyword, $options: "i" } },
-        { packageNature: { $regex: keyword, $options: "i" } },
-        { details: { $regex: keyword, $options: "i" } },
-        { "targetAudience.department": { $regex: keyword, $options: "i" } },
+        { packageName: { $regex: query, $options: "i" } },
+        { packageNature: { $regex: query, $options: "i" } },
+        { details: { $regex: query, $options: "i" } },
+        { "targetAudience.department": { $regex: query, $options: "i" } },
       ];
     }
 

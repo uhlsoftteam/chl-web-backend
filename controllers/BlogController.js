@@ -24,6 +24,8 @@ exports.getBlogBySlug = async (req, res) => {
       "author",
       "name"
     );
+    console.log(blog);
+
     if (!blog)
       return res
         .status(404)
@@ -125,6 +127,34 @@ exports.deleteBlog = async (req, res) => {
     await blog.deleteOne();
     res.status(200).json({ success: true, message: "Blog post removed" });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Get single blog by ID
+// @route   GET /api/blogs/id/:id
+// @access  Public (or Private depending on your need)
+exports.getBlogById = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id).populate(
+      "author",
+      "name email"
+    );
+
+    if (!blog) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found" });
+    }
+
+    res.status(200).json({ success: true, data: blog });
+  } catch (error) {
+    // Check if the error is a CastError (invalid MongoDB ID)
+    if (error.kind === "ObjectId") {
+      return res
+        .status(404)
+        .json({ success: false, message: "Invalid ID format" });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 };

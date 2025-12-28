@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 
 const blogSchema = new mongoose.Schema(
   {
@@ -55,11 +56,19 @@ const blogSchema = new mongoose.Schema(
 
 // Create slug from title before saving
 blogSchema.pre("save", function (next) {
-  if (this.isModified("title") && !this.slug) {
+  if (this.isModified("title")) {
+    // বাংলা এবং ইংরেজি উভয় অক্ষর সাপোর্ট করার জন্য এই Regex ব্যবহার করুন
     this.slug = this.title
+      .trim()
       .toLowerCase()
-      .replace(/[^\w ]+/g, "")
-      .replace(/ +/g, "-");
+      .replace(/[^\u0000-\u007F\u0980-\u09FF\s]/g, "") // শুধু ইংরেজি এবং বাংলা অক্ষর রাখবে
+      .replace(/\s+/g, "-") // স্পেসকে ড্যাশ করবে
+      .replace(/-+/g, "-"); // ডবল ড্যাশ সিঙ্গেল করবে
+
+    // যদি টাইটেল থেকে স্লাগ তৈরি করতে ব্যর্থ হয় (নিরাপত্তার জন্য)
+    if (!this.slug || this.slug === "-") {
+      this.slug = `post-${Date.now()}`;
+    }
   }
   next();
 });

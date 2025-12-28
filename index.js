@@ -15,6 +15,7 @@ const blogRoutes = require("./routes/blog");
 const doctorRoutes = require("./routes/doctor");
 const departmentRoutes = require("./routes/department");
 const packageRoutes = require("./routes/package");
+const appointmentRoutes = require("./routes/appointment");
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,7 @@ app.use("/api/blogs", blogRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/packages", packageRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 // Base route
 app.get("/", (req, res) => {
