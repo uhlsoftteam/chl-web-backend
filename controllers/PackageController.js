@@ -37,19 +37,39 @@ exports.createPackage = async (req, res, next) => {
   try {
     let data = { ...req.body };
 
-    // Parse JSON strings back into objects
-    if (typeof data.targetAudience === "string")
-      data.targetAudience = JSON.parse(data.targetAudience);
-    if (typeof data.seo === "string") data.seo = JSON.parse(data.seo);
+    // 1. Robust Parsing for FormData strings
+    if (data.targetAudience && typeof data.targetAudience === "string") {
+      try {
+        data.targetAudience = JSON.parse(data.targetAudience);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid JSON format for targetAudience",
+        });
+      }
+    }
 
+    if (data.seo && typeof data.seo === "string") {
+      try {
+        data.seo = JSON.parse(data.seo);
+      } catch (e) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Invalid JSON format for SEO" });
+      }
+    }
+
+    // 2. Handle Image Upload
     if (req.file) {
       data.packageImage = {
         url: `/uploads/packages/${req.file.filename}`,
-        altText: req.body.packageName,
+        altText: data.packageName || "Package Image",
       };
     }
 
+    // 3. Create the Package
     const package = await Package.create(data);
+
     res.status(201).json({ success: true, data: package });
   } catch (error) {
     if (error.code === 11000) {
@@ -67,27 +87,65 @@ exports.updatePackage = async (req, res, next) => {
   try {
     let updateData = { ...req.body };
 
-    // If a new file is uploaded, update the packageImage object
+    // 1. Parse JSON strings for nested objects
+    if (
+      updateData.targetAudience &&
+      typeof updateData.targetAudience === "string"
+    ) {
+      try {
+        updateData.targetAudience = JSON.parse(updateData.targetAudience);
+      } catch (e) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            error: "Invalid JSON format for targetAudience",
+          });
+      }
+    }
+
+    if (updateData.seo && typeof updateData.seo === "string") {
+      try {
+        updateData.seo = JSON.parse(updateData.seo);
+      } catch (e) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Invalid JSON format for SEO" });
+      }
+    }
+
+    // 2. Handle New Image Upload
     if (req.file) {
       updateData.packageImage = {
         url: `/uploads/packages/${req.file.filename}`,
-        altText: req.body.packageName || "Updated Package Image",
+        // Use the new package name if provided, otherwise fallback to existing logic
+        altText: updateData.packageName || "Updated Package Image",
       };
     }
 
-    const package = await Package.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    // 3. Update in Database
+    const updatedPackage = await Package.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      {
+        new: true, // Return the modified document
+        runValidators: true, // Ensure schema validation still runs
+      }
+    );
 
-    if (!package) {
+    if (!updatedPackage) {
       return res
         .status(404)
         .json({ success: false, error: "Package not found" });
     }
 
-    res.status(200).json({ success: true, data: package });
+    res.status(200).json({ success: true, data: updatedPackage });
   } catch (error) {
+    if (error.code === 11000) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Package name or slug already exists" });
+    }
     res.status(400).json({ success: false, error: error.message });
   }
 };
