@@ -31,16 +31,28 @@ exports.getPackageBySlug = async (req, res, next) => {
   }
 };
 
-// @desc    Create new package (Requires Auth/Admin middleware)
+// @desc    Create new package
 // @route   POST /api/v1/packages
 exports.createPackage = async (req, res, next) => {
   try {
-    const package = await Package.create(req.body);
+    let data = { ...req.body };
+
+    // Parse JSON strings back into objects
+    if (typeof data.targetAudience === "string")
+      data.targetAudience = JSON.parse(data.targetAudience);
+    if (typeof data.seo === "string") data.seo = JSON.parse(data.seo);
+
+    if (req.file) {
+      data.packageImage = {
+        url: `/uploads/packages/${req.file.filename}`,
+        altText: req.body.packageName,
+      };
+    }
+
+    const package = await Package.create(data);
     res.status(201).json({ success: true, data: package });
   } catch (error) {
-    // Handle validation and duplicate errors
     if (error.code === 11000) {
-      // 11000 is MongoDB's duplicate key error code
       return res
         .status(400)
         .json({ success: false, error: "Package name or slug already exists" });
@@ -49,13 +61,23 @@ exports.createPackage = async (req, res, next) => {
   }
 };
 
-// @desc    Update package by ID (Requires Auth/Admin middleware)
+// @desc    Update package by ID
 // @route   PUT /api/v1/packages/:id
 exports.updatePackage = async (req, res, next) => {
   try {
-    const package = await Package.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, // Return the updated document
-      runValidators: true, // Run schema validators
+    let updateData = { ...req.body };
+
+    // If a new file is uploaded, update the packageImage object
+    if (req.file) {
+      updateData.packageImage = {
+        url: `/uploads/packages/${req.file.filename}`,
+        altText: req.body.packageName || "Updated Package Image",
+      };
+    }
+
+    const package = await Package.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
     });
 
     if (!package) {

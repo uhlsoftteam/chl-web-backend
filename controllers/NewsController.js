@@ -5,6 +5,7 @@ const News = require("../models/News");
 // @access  Public
 exports.getNews = async (req, res) => {
   try {
+    // We fetch everything, but we sort by date
     const news = await News.find({ isPublished: true }).sort({
       publishedAt: -1,
     });
@@ -35,15 +36,21 @@ exports.getNewsById = async (req, res) => {
 // @access  Private (Admin)
 exports.createNews = async (req, res) => {
   try {
+    // Handle Image
     if (req.file) {
-      // This matches your app.use("/uploads", ...) config in app.js
-      req.body.image = `/uploads/news/${req.file.filename}`;
+      req.body.thumbnail = `/uploads/news/${req.file.filename}`;
     }
 
-    // FormData sends Booleans as strings "true"/"false".
-    // Mongoose usually handles this, but if you have issues, cast it:
-    if (req.body.isPublished) {
+    // Handle JSON/FormData quirks
+    if (req.body.isPublished)
       req.body.isPublished = req.body.isPublished === "true";
+
+    // Logic: If it's a video, maybe you want to auto-set the source to 'YouTube'
+    if (
+      req.body.contentType === "video" &&
+      req.body.videoUrl?.includes("youtube")
+    ) {
+      req.body.source = "YouTube";
     }
 
     const news = await News.create(req.body);
@@ -53,48 +60,30 @@ exports.createNews = async (req, res) => {
   }
 };
 
-// @desc    Update news item
-// @route   PUT /api/news/:id
-// @access  Private (Admin)
-// @desc    Update news item
-// @route   PUT /api/news/:id
-// @access  Private (Admin)
 exports.updateNews = async (req, res) => {
   try {
     let news = await News.findById(req.params.id);
 
     if (!news) {
-      return res.status(404).json({
-        success: false,
-        message: "News item not found",
-      });
+      return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    // 1. Handle New Image Upload
+    // 1. Handle New Image Upload (Your existing logic)
     if (req.file) {
-      // Set the new path for the database
-      req.body.image = `/uploads/news/${req.file.filename}`;
-
-      // Note: req.file is populated by the 'upload.single' middleware
-      // added to your route file.
+      req.body.thumbnail = `/uploads/news/${req.file.filename}`;
     }
 
-    // 2. Handle FormData types (Booleans/Arrays)
-    // FormData sends Booleans as strings like "true" or "false"
+    // 2. Fix Boolean strings from FormData
     if (req.body.isPublished !== undefined) {
       req.body.isPublished = req.body.isPublished === "true";
     }
 
-    // If you have tags or other JSON objects in News
-    if (req.body.tags && typeof req.body.tags === "string") {
-      try {
-        req.body.tags = JSON.parse(req.body.tags);
-      } catch (e) {
-        // Keep as is if parsing fails
-      }
+    // 3. Clear data that doesn't belong
+    // Logic: If they switched to 'external', clear the 'content' field to save space
+    if (req.body.contentType === "external") {
+      req.body.content = "";
     }
 
-    // 3. Update in Database
     news = await News.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -102,7 +91,6 @@ exports.updateNews = async (req, res) => {
 
     res.status(200).json({ success: true, data: news });
   } catch (error) {
-    console.error("Update News Error:", error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
@@ -119,6 +107,24 @@ exports.deleteNews = async (req, res) => {
         .json({ success: false, message: "News item not found" });
     await news.deleteOne();
     res.status(200).json({ success: true, message: "News item deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.getNewsBySlugOrId = async (req, res) => {
+  try {
+    const query = mongoose.Types.ObjectId.isValid(req.params.id)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+
+    const news = await News.findOne(query);
+
+    if (!news)
+      return res
+        .status(404)
+        .json({ success: false, message: "News not found" });
+    res.status(200).json({ success: true, data: news });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

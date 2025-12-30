@@ -1,4 +1,5 @@
 const express = require("express");
+const upload = require("../middleware/uploadMiddleware"); // Import your middleware
 const {
   getPackages,
   getPackageBySlug,
@@ -6,22 +7,19 @@ const {
   updatePackage,
   seedPackages,
   searchPackages,
-} = require("../controllers/PackageController"); // Path to your controller
+} = require("../controllers/PackageController");
 
 const router = express.Router();
 
-// Public routes for fetching data
-router.route("/").get(getPackages); // GET /api/v1/packages
-
+// Public routes
+router.route("/").get(getPackages);
 router.get("/search", searchPackages);
+router.route("/:slug").get(getPackageBySlug);
 
-router.route("/:slug").get(getPackageBySlug); // GET /api/v1/packages/executive-basic-women
-
-// Admin/Protected routes for creating/updating
-// You would typically add an authentication/authorization middleware here (e.g., protect, authorize)
-router.route("/").post(createPackage); // POST /api/v1/packages
-
-router.route("/:id").put(updatePackage); // PUT /api/v1/packages/:id
+// Protected routes with Image Upload
+// "packageImage" must match the key used in your Postman/Frontend FormData
+router.route("/").post(upload.single("packageImage"), createPackage);
+router.route("/:id").put(upload.single("packageImage"), updatePackage);
 
 router.route("/seed").post(seedPackages);
 

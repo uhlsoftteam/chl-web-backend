@@ -8,16 +8,41 @@ const newsSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Headline cannot be more than 100 characters"],
     },
-    // SEO: News needs slugs too
+    // NEW: Type of news
+    contentType: {
+      type: String,
+      enum: ["article", "video", "external"],
+      default: "article",
+    },
     slug: {
       type: String,
       unique: true,
       lowercase: true,
       index: true,
     },
+    // Optional for external/video types
     content: {
       type: String,
-      required: [true, "Please add content"],
+      required: function () {
+        return this.contentType === "article";
+      },
+    },
+    // NEW: For YouTube/Vimeo links
+    videoUrl: {
+      type: String,
+      validate: {
+        validator: function (v) {
+          return (
+            !v ||
+            /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)/.test(v)
+          );
+        },
+        message: "Please provide a valid video URL",
+      },
+    },
+    // NEW: For linking to other medical journals/sites
+    externalUrl: {
+      type: String,
     },
     summary: {
       type: String,
@@ -25,18 +50,16 @@ const newsSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      default: "Internal",
+      default: "Internal Medical Team", // Good for authority
     },
     thumbnail: {
       type: String,
       default: "no-photo.jpg",
     },
-    // SEO: Alt text
     imageAlt: {
       type: String,
-      default: "News thumbnail",
+      default: "Medical news illustration",
     },
-    // SEO Specific Fields
     seo: {
       metaTitle: String,
       metaDescription: String,
@@ -50,9 +73,7 @@ const newsSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 // Create slug from title before saving
