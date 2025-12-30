@@ -32,20 +32,23 @@ exports.getNewsById = async (req, res) => {
 };
 
 // @desc    Create news item
-// @route   POST /api/news
-// @access  Private (Admin)
 exports.createNews = async (req, res) => {
   try {
-    // Handle Image
+    // 1. Handle Thumbnail Logic
     if (req.file) {
+      // If a file was uploaded manually, use that path
       req.body.thumbnail = `/uploads/news/${req.file.filename}`;
+    } else if (req.body.thumbnail && req.body.thumbnail.startsWith("http")) {
+      // If no file was uploaded, but the frontend sent a YouTube URL string,
+      // we leave req.body.thumbnail as is so it saves the URL
     }
 
-    // Handle JSON/FormData quirks
-    if (req.body.isPublished)
+    // 2. Handle JSON/FormData quirks
+    if (req.body.isPublished !== undefined) {
       req.body.isPublished = req.body.isPublished === "true";
+    }
 
-    // Logic: If it's a video, maybe you want to auto-set the source to 'YouTube'
+    // 3. Auto-set source if it's a YouTube link
     if (
       req.body.contentType === "video" &&
       req.body.videoUrl?.includes("youtube")
@@ -60,26 +63,26 @@ exports.createNews = async (req, res) => {
   }
 };
 
+// @desc    Update news item
 exports.updateNews = async (req, res) => {
   try {
     let news = await News.findById(req.params.id);
-
-    if (!news) {
+    if (!news)
       return res.status(404).json({ success: false, message: "Not found" });
-    }
 
-    // 1. Handle New Image Upload (Your existing logic)
+    // 1. Handle Thumbnail Logic
     if (req.file) {
       req.body.thumbnail = `/uploads/news/${req.file.filename}`;
+    } else if (req.body.thumbnail && req.body.thumbnail.startsWith("http")) {
+      // Allow saving the external YouTube URL string
     }
 
-    // 2. Fix Boolean strings from FormData
+    // 2. Fix Boolean strings
     if (req.body.isPublished !== undefined) {
       req.body.isPublished = req.body.isPublished === "true";
     }
 
-    // 3. Clear data that doesn't belong
-    // Logic: If they switched to 'external', clear the 'content' field to save space
+    // 3. Clear content if external
     if (req.body.contentType === "external") {
       req.body.content = "";
     }
