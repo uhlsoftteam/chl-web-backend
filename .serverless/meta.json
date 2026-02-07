@@ -111,7 +111,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-                  "S3Key": "serverless/chl-backend/dev/1770455813844-2026-02-07T09:16:53.844Z/chl-backend.zip"
+                  "S3Key": "serverless/chl-backend/dev/1770460374177-2026-02-07T10:32:54.177Z/chl-backend.zip"
                 },
                 "Handler": "app.handler",
                 "Runtime": "nodejs20.x",
@@ -359,7 +359,7 @@
                 "AppLambdaPermissionApiGateway"
               ]
             },
-            "ApiGatewayDeployment1770455717709": {
+            "ApiGatewayDeployment1770460359828": {
               "Type": "AWS::ApiGateway::Deployment",
               "Properties": {
                 "RestApiId": {
@@ -642,7 +642,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-                "S3Key": "serverless/chl-backend/dev/1770455813844-2026-02-07T09:16:53.844Z/chl-backend.zip"
+                "S3Key": "serverless/chl-backend/dev/1770460374177-2026-02-07T10:32:54.177Z/chl-backend.zip"
               },
               "Handler": "app.handler",
               "Runtime": "nodejs20.x",
@@ -890,7 +890,7 @@
               "AppLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1770455717709": {
+          "ApiGatewayDeployment1770460359828": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -991,7 +991,7 @@
     },
     "dashboard": {
       "isEnabledForService": false,
-      "requiredAuthentication": true,
+      "requiredAuthentication": false,
       "orgFeaturesInUse": null,
       "orgObservabilityIntegrations": null,
       "serviceAppId": null,
@@ -1011,12 +1011,12 @@
     "serviceProviderAwsCfStackName": "chl-backend-dev",
     "serviceProviderAwsCfStackId": "arn:aws:cloudformation:eu-north-1:350732690091:stack/chl-backend-dev/603454c0-03f1-11f1-9fc6-0674bcb4cf71",
     "serviceProviderAwsCfStackCreated": "2026-02-07T06:51:06.248Z",
-    "serviceProviderAwsCfStackUpdated": null,
-    "serviceProviderAwsCfStackStatus": "CREATE_COMPLETE",
+    "serviceProviderAwsCfStackUpdated": "2026-02-07T09:17:15.770Z",
+    "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
     "serviceProviderAwsCfStackOutputs": [
       {
         "OutputKey": "AppLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:eu-north-1:350732690091:function:chl-backend-dev-app:1",
+        "OutputValue": "arn:aws:lambda:eu-north-1:350732690091:function:chl-backend-dev-app:2",
         "Description": "Current Lambda function version",
         "ExportName": "sls-chl-backend-dev-AppLambdaFunctionQualifiedArn"
       },
@@ -1125,7 +1125,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-              "S3Key": "serverless/chl-backend/dev/1770455813844-2026-02-07T09:16:53.844Z/chl-backend.zip"
+              "S3Key": "serverless/chl-backend/dev/1770460374177-2026-02-07T10:32:54.177Z/chl-backend.zip"
             },
             "Handler": "app.handler",
             "Runtime": "nodejs20.x",
@@ -1373,7 +1373,7 @@
             "AppLambdaPermissionApiGateway"
           ]
         },
-        "ApiGatewayDeployment1770455717709": {
+        "ApiGatewayDeployment1770460359828": {
           "Type": "AWS::ApiGateway::Deployment",
           "Properties": {
             "RestApiId": {
