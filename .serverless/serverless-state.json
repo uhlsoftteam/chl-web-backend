@@ -110,7 +110,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-                "S3Key": "serverless/chl-backend/dev/1770447039973-2026-02-07T06:50:39.973Z/chl-backend.zip"
+                "S3Key": "serverless/chl-backend/dev/1770455813844-2026-02-07T09:16:53.844Z/chl-backend.zip"
               },
               "Handler": "app.handler",
               "Runtime": "nodejs20.x",
@@ -133,14 +133,14 @@
               "AppLogGroup"
             ]
           },
-          "AppLambdaVersiona29okLeQJiYMgJ6mC6lWdInVJM0hlq5KCbkoaHCBVw": {
+          "AppLambdaVersionpc3OuQEjidud3PSWvY6eqwt32EO78yuL0AOU8b7sm8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AppLambdaFunction"
               },
-              "CodeSha256": "FQwl8akK0Uo1v16uDXEVefKHI1i8xyI8qRI2dEcW/Ug="
+              "CodeSha256": "AAGxzYRxEYvf79tFPOLdYE+QC92nV/AuzRpdN+6Kmds="
             }
           },
           "ApiGatewayRestApi": {
@@ -358,7 +358,7 @@
               "AppLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1770447028030": {
+          "ApiGatewayDeployment1770455717709": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -421,7 +421,7 @@
           "AppLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppLambdaVersiona29okLeQJiYMgJ6mC6lWdInVJM0hlq5KCbkoaHCBVw"
+              "Ref": "AppLambdaVersionpc3OuQEjidud3PSWvY6eqwt32EO78yuL0AOU8b7sm8"
             },
             "Export": {
               "Name": "sls-chl-backend-dev-AppLambdaFunctionQualifiedArn"
@@ -531,7 +531,7 @@
         "timeout": 30,
         "runtime": "nodejs20.x",
         "vpc": {},
-        "versionLogicalId": "AppLambdaVersiona29okLeQJiYMgJ6mC6lWdInVJM0hlq5KCbkoaHCBVw"
+        "versionLogicalId": "AppLambdaVersionpc3OuQEjidud3PSWvY6eqwt32EO78yuL0AOU8b7sm8"
       }
     },
     "configValidationMode": "warn",
@@ -555,10 +555,10 @@
     "appId": null,
     "orgId": null,
     "layers": {},
-    "artifact": "/Users/uhldev/projects/uhl/chl-web-backend/.serverless/chl-backend.zip"
+    "artifact": "C:\\Users\\Administrator\\OneDrive\\Desktop\\continental-backend\\.serverless\\chl-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/chl-backend/dev/1770447039973-2026-02-07T06:50:39.973Z",
+    "artifactDirectoryName": "serverless/chl-backend/dev/1770455813844-2026-02-07T09:16:53.844Z",
     "artifact": "chl-backend.zip"
   }
 }
