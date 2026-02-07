@@ -1,0 +1,38 @@
+service: chl-backend
+
+provider:
+    name: aws
+    runtime: nodejs20.x
+    stage: ${opt:stage, 'dev'}
+    region: eu-north-1
+    timeout: 30
+    binaryMediaTypes:
+        - multipart/form-data
+    environment:
+        MONGODB_URI: ${env:MONGODB_URI}
+
+useDotenv: true
+
+plugins:
+    - serverless-apigw-binary
+    - serverless-offline
+
+custom:
+    dotenv:
+        path: .env.${opt:stage, self:provider.stage}
+    apigwBinary:
+        types:
+            - multipart/form-data
+
+functions:
+    app:
+        handler: app.handler
+        events:
+            - http:
+                  path: /
+                  method: ANY
+                  cors: true
+            - http:
+                  path: /{proxy+}
+                  method: ANY
+                  cors: true
