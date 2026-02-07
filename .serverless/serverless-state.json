@@ -110,7 +110,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-                "S3Key": "serverless/chl-backend/dev/1770460374177-2026-02-07T10:32:54.177Z/chl-backend.zip"
+                "S3Key": "serverless/chl-backend/dev/1770461127884-2026-02-07T10:45:27.884Z/chl-backend.zip"
               },
               "Handler": "app.handler",
               "Runtime": "nodejs20.x",
@@ -358,7 +358,7 @@
               "AppLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1770460359828": {
+          "ApiGatewayDeployment1770461113313": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -558,7 +558,7 @@
     "artifact": "C:\\Users\\Administrator\\OneDrive\\Desktop\\continental-backend\\.serverless\\chl-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/chl-backend/dev/1770460374177-2026-02-07T10:32:54.177Z",
+    "artifactDirectoryName": "serverless/chl-backend/dev/1770461127884-2026-02-07T10:45:27.884Z",
     "artifact": "chl-backend.zip"
   }
 }

@@ -45,7 +45,7 @@ app.get("/api/hello", (req, res) => {
   // Log MongoDB URI
   console.log("MongoDB URI:", process.env.MONGODB_URI);
 
-  res.json({ message: "Hello, world! This is an Emergency" });
+  res.json({ message: "Hello, world! This is an Emergency " });
 });
 
 // Wrap the app with serverless-http middleware for serverless deployment
