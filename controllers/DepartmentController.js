@@ -99,27 +99,22 @@ exports.deleteDepartment = async (req, res) => {
 
 exports.seedDepartments = async (req, res) => {
   try {
-    // 1. You can either read from the JSON file created in step 2:
-    // const data = JSON.parse(
-    //   fs.readFileSync(path.join(__dirname, '../data/departments.json'), 'utf-8')
-    // );
-
-    // 2. OR you can just accept the array via the Request Body (Postman):
     const data = req.body;
 
-    if (!Array.isArray(data) || data.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide an array of departments",
-      });
-    }
+    // This line is the key: it wipes the collection so you can start fresh
+    // Only use this in your local/staging environment to reset
+    await Department.deleteMany({});
 
-    // Option: Clear existing departments to avoid duplicate key errors?
-    // await Department.deleteMany({});
+    const preparedData = data.map((dept) => ({
+      ...dept,
+      slug: dept.name
+        .toLowerCase()
+        .replace(/[^\w ]+/g, "")
+        .replace(/ +/g, "-")
+        .trim(),
+    }));
 
-    // Use insertMany for bulk creation
-    // ordered: false ensures that if one fails (e.g. duplicate), the others still insert
-    const departments = await Department.insertMany(data, { ordered: false });
+    const departments = await Department.insertMany(preparedData);
 
     res.status(201).json({
       success: true,
@@ -127,15 +122,6 @@ exports.seedDepartments = async (req, res) => {
       data: departments,
     });
   } catch (error) {
-    // Check if error is due to duplicates (code 11000)
-    if (error.code === 11000 || error.writeErrors) {
-      // If using insertMany with ordered:false, Mongoose throws an error containing the inserted docs and the errors
-      return res.status(207).json({
-        success: true,
-        message: "Process completed with some duplicate errors skipped.",
-        inserted: error.insertedDocs ? error.insertedDocs.length : "Unknown",
-      });
-    }
     res.status(500).json({ success: false, error: error.message });
   }
 };
