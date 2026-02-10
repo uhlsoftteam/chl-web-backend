@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
 const serverless = require("serverless-http");
+const createError = require("http-errors");
 // Load env vars
 dotenv.config();
 
@@ -50,5 +51,18 @@ app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello, world! This is an Emergency" });
 });
 
+app.use(async (req, res, next) => {
+    next(createError.NotFound("This route does not exist!"));
+});
+
+app.use((err, req, res, next) => {
+    res.status(err.status || 500);
+    res.send({
+        error: {
+            status: err.status || 500,
+            message: err.message,
+        },
+    });
+});
 // Wrap the app with serverless-http middleware for serverless deployment
 module.exports.handler = serverless(app);

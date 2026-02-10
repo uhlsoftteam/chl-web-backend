@@ -10,7 +10,16 @@ provider:
         - multipart/form-data
     environment:
         MONGODB_URI: ${env:MONGODB_URI}
-
+        S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+        S3_BUCKET_LOCATION: ${env:S3_BUCKET_LOCATION}
+        SINGLE_IMAGE_UPLOAD_LIMIT: ${env:SINGLE_IMAGE_UPLOAD_LIMIT}
+    iamRoleStatements:
+        - Effect: Allow
+          Action:
+              - ses:SendEmail
+              - s3:*
+          Resource:
+              - arn:aws:s3:::${self:provider.environment.S3_BUCKET_NAME}/*
 useDotenv: true
 
 plugins:
@@ -36,3 +45,10 @@ functions:
                   path: /{proxy+}
                   method: ANY
                   cors: true
+    uploadFileSingle:
+        handler: services/upload-file/uploadSingleFile.handler
+        events:
+            - http:
+                  path: /upload/single/{fileType}
+                  method: post
+                  cors: true # Enable CORS for this endpoint
