@@ -14,7 +14,7 @@
         "multipart/form-data"
       ],
       "environment": {
-        "MONGODB_URI": "mongodb://continentalweb:bX9rT3p2Y2F0Q1pRZ2hGTA@10.200.64.251:27017/admin?authSource=Admin&retryWrites=true&w=majority"
+        "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority"
       },
       "versionFunctions": true,
       "compiledCloudFormationTemplate": {
@@ -110,7 +110,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-                "S3Key": "serverless/chl-backend/dev/1770461127884-2026-02-07T10:45:27.884Z/chl-backend.zip"
+                "S3Key": "serverless/chl-backend/dev/1770461488365-2026-02-07T10:51:28.365Z/chl-backend.zip"
               },
               "Handler": "app.handler",
               "Runtime": "nodejs20.x",
@@ -119,7 +119,7 @@
               "Timeout": 30,
               "Environment": {
                 "Variables": {
-                  "MONGODB_URI": "mongodb://continentalweb:bX9rT3p2Y2F0Q1pRZ2hGTA@10.200.64.251:27017/admin?authSource=Admin&retryWrites=true&w=majority"
+                  "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority"
                 }
               },
               "Role": {
@@ -133,7 +133,7 @@
               "AppLogGroup"
             ]
           },
-          "AppLambdaVersionpc3OuQEjidud3PSWvY6eqwt32EO78yuL0AOU8b7sm8": {
+          "AppLambdaVersionHq8ZNiz5WDJ1OqRnfp2DOtD4ZnwtZPSXNAibCPMbmc": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
@@ -358,7 +358,7 @@
               "AppLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1770461113313": {
+          "ApiGatewayDeployment1770461472606": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -421,7 +421,7 @@
           "AppLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppLambdaVersionpc3OuQEjidud3PSWvY6eqwt32EO78yuL0AOU8b7sm8"
+              "Ref": "AppLambdaVersionHq8ZNiz5WDJ1OqRnfp2DOtD4ZnwtZPSXNAibCPMbmc"
             },
             "Export": {
               "Name": "sls-chl-backend-dev-AppLambdaFunctionQualifiedArn"
@@ -531,7 +531,7 @@
         "timeout": 30,
         "runtime": "nodejs20.x",
         "vpc": {},
-        "versionLogicalId": "AppLambdaVersionpc3OuQEjidud3PSWvY6eqwt32EO78yuL0AOU8b7sm8"
+        "versionLogicalId": "AppLambdaVersionHq8ZNiz5WDJ1OqRnfp2DOtD4ZnwtZPSXNAibCPMbmc"
       }
     },
     "configValidationMode": "warn",
@@ -558,7 +558,7 @@
     "artifact": "C:\\Users\\Administrator\\OneDrive\\Desktop\\continental-backend\\.serverless\\chl-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/chl-backend/dev/1770461127884-2026-02-07T10:45:27.884Z",
+    "artifactDirectoryName": "serverless/chl-backend/dev/1770461488365-2026-02-07T10:51:28.365Z",
     "artifact": "chl-backend.zip"
   }
 }

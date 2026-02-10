@@ -365,43 +365,40 @@ exports.searchDoctors = async (req, res) => {
 // @access  Private (Admin)
 exports.bulkUpdateDoctors = async (req, res) => {
   try {
-    const updates = req.body; // Expecting an array of mapped doctor objects
+    const updates = req.body;
 
     if (!Array.isArray(updates) || updates.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide an array of doctor updates",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Provide an array of updates" });
     }
 
-    // Prepare the bulk operations
     const bulkOps = updates.map((doc) => {
-      // Create an update object with only the fields we want to change
       const updateData = {};
       if (doc.introduction !== undefined)
         updateData.introduction = doc.introduction;
       if (doc.academic !== undefined) updateData.academic = doc.academic;
       if (doc.experience !== undefined) updateData.experience = doc.experience;
 
+      // ADD THESE TWO LINES:
+      if (doc.department !== undefined) updateData.department = doc.department;
+      if (doc.location !== undefined) updateData.location = doc.location;
+
       return {
         updateOne: {
-          // Match by ID (as provided in the mapped data batches)
           filter: { _id: doc._id },
           update: { $set: updateData },
         },
       };
     });
 
-    // Execute bulk update
     const result = await Doctor.bulkWrite(bulkOps);
 
     res.status(200).json({
       success: true,
       message: `${result.modifiedCount} doctors updated successfully`,
-      details: result,
     });
   } catch (error) {
-    console.error("Bulk Update Error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

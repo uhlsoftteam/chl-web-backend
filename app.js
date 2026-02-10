@@ -16,6 +16,7 @@ const doctorRoutes = require("./routes/doctor");
 const departmentRoutes = require("./routes/department");
 const packageRoutes = require("./routes/package");
 const appointmentRoutes = require("./routes/appointment");
+const clinicAndCenterRoutes = require("./routes/clinicAndCenters");
 const connectDB = require("./db/connectDB");
 
 const app = express();
@@ -38,6 +39,7 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/clinics-and-centers", clinicAndCenterRoutes);
 
 // Base route
 // comment this , only for testing
@@ -45,7 +47,7 @@ app.get("/api/hello", (req, res) => {
   // Log MongoDB URI
   console.log("MongoDB URI:", process.env.MONGODB_URI);
 
-  res.json({ message: "Hello, world! This is an Emergency " });
+  res.json({ message: "Hello, world! This is an Emergency" });
 });
 
 // Wrap the app with serverless-http middleware for serverless deployment
