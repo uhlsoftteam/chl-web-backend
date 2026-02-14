@@ -17,26 +17,25 @@ const upload = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
+// --- Public Routes ---
 router.get("/", getDoctors);
-router.get("/search", searchDoctors);
+router.get("/search", searchDoctors); // Must be above /:slug
 router.get("/:slug", getDoctorBySlug);
+router.get("/id/:id", getDoctorById); // Added a specific path for ID if needed
 
-// Admin routes
-// 1. Add upload.single('image') to POST
-router.post(
-  "/",
-  // protect,
-  // isAdmin,
-  upload.single("image"), // 'image' matches the form-data key
-  createDoctor
-);
+// --- Admin Protected Routes ---
+// Use .all or apply middleware to a group if you prefer,
+// but sticking to your current style:
 
-// 2. Add upload.single('image') to PUT
-router.put("/:id", upload.single("image"), updateDoctor);
+router.post("/", protect, isAdmin, upload.single("image"), createDoctor);
+
+router.put("/:id", protect, isAdmin, upload.single("image"), updateDoctor);
 
 router.delete("/:id", protect, isAdmin, deleteDoctor);
 router.patch("/reorder", protect, isAdmin, reorderDoctors);
-router.route("/seed").post(seedDoctors);
-router.route("/bulk-update").post(bulkUpdateDoctors);
+
+// Seed and Bulk updates
+router.post("/seed", protect, isAdmin, seedDoctors);
+router.post("/bulk-update", protect, isAdmin, bulkUpdateDoctors);
 
 module.exports = router;

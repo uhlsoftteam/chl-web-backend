@@ -1,11 +1,14 @@
 const News = require("../models/News");
+const mongoose = require("mongoose");
+const { uploadFileIntoS3 } = require("../services/upload-file/uploadUtility");
+
+// Helper to get extension
+const getExtension = (filename) => filename.split(".").pop().toLowerCase();
 
 // @desc    Get all published news
 // @route   GET /api/news
-// @access  Public
 exports.getNews = async (req, res) => {
   try {
-    // We fetch everything, but we sort by date
     const news = await News.find({ isPublished: true }).sort({
       publishedAt: -1,
     });
@@ -17,7 +20,6 @@ exports.getNews = async (req, res) => {
 
 // @desc    Get single news item
 // @route   GET /api/news/:id
-// @access  Public
 exports.getNewsById = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -34,29 +36,28 @@ exports.getNewsById = async (req, res) => {
 // @desc    Create news item
 exports.createNews = async (req, res) => {
   try {
-    // 1. Handle Thumbnail Logic
+    const data = { ...req.body };
+
+    // 1. Handle Thumbnail Logic (S3 vs External URL)
     if (req.file) {
-      // If a file was uploaded manually, use that path
-      req.body.thumbnail = `/uploads/news/${req.file.filename}`;
-    } else if (req.body.thumbnail && req.body.thumbnail.startsWith("http")) {
-      // If no file was uploaded, but the frontend sent a YouTube URL string,
-      // we leave req.body.thumbnail as is so it saves the URL
+      // Manual upload to S3
+      const extension = getExtension(req.file.originalname);
+      data.thumbnail = await uploadFileIntoS3(req.file.buffer, extension);
+    } else if (data.thumbnail && data.thumbnail.startsWith("http")) {
+      // Keep as is if it's a YouTube thumbnail URL
     }
 
-    // 2. Handle JSON/FormData quirks
-    if (req.body.isPublished !== undefined) {
-      req.body.isPublished = req.body.isPublished === "true";
+    // 2. Handle JSON/FormData boolean quirks
+    if (data.isPublished !== undefined) {
+      data.isPublished = data.isPublished === "true";
     }
 
     // 3. Auto-set source if it's a YouTube link
-    if (
-      req.body.contentType === "video" &&
-      req.body.videoUrl?.includes("youtube")
-    ) {
-      req.body.source = "YouTube";
+    if (data.contentType === "video" && data.videoUrl?.includes("youtube")) {
+      data.source = "YouTube";
     }
 
-    const news = await News.create(req.body);
+    const news = await News.create(data);
     res.status(201).json({ success: true, data: news });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -66,41 +67,39 @@ exports.createNews = async (req, res) => {
 // @desc    Update news item
 exports.updateNews = async (req, res) => {
   try {
-    let news = await News.findById(req.params.id);
-    if (!news)
-      return res.status(404).json({ success: false, message: "Not found" });
+    let data = { ...req.body };
 
     // 1. Handle Thumbnail Logic
     if (req.file) {
-      req.body.thumbnail = `/uploads/news/${req.file.filename}`;
-    } else if (req.body.thumbnail && req.body.thumbnail.startsWith("http")) {
-      // Allow saving the external YouTube URL string
+      const extension = getExtension(req.file.originalname);
+      data.thumbnail = await uploadFileIntoS3(req.file.buffer, extension);
     }
 
-    // 2. Fix Boolean strings
-    if (req.body.isPublished !== undefined) {
-      req.body.isPublished = req.body.isPublished === "true";
+    // 2. Fix Boolean strings from FormData
+    if (data.isPublished !== undefined) {
+      data.isPublished = data.isPublished === "true";
     }
 
     // 3. Clear content if external
-    if (req.body.contentType === "external") {
-      req.body.content = "";
+    if (data.contentType === "external") {
+      data.content = "";
     }
 
-    news = await News.findByIdAndUpdate(req.params.id, req.body, {
+    const updatedNews = await News.findByIdAndUpdate(req.params.id, data, {
       new: true,
       runValidators: true,
     });
 
-    res.status(200).json({ success: true, data: news });
+    if (!updatedNews)
+      return res.status(404).json({ success: false, message: "Not found" });
+
+    res.status(200).json({ success: true, data: updatedNews });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
 };
 
 // @desc    Delete news item
-// @route   DELETE /api/news/:id
-// @access  Private (Admin)
 exports.deleteNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -108,6 +107,7 @@ exports.deleteNews = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "News item not found" });
+
     await news.deleteOne();
     res.status(200).json({ success: true, message: "News item deleted" });
   } catch (error) {
@@ -115,6 +115,7 @@ exports.deleteNews = async (req, res) => {
   }
 };
 
+// @desc    Get news by Slug or ID
 exports.getNewsBySlugOrId = async (req, res) => {
   try {
     const query = mongoose.Types.ObjectId.isValid(req.params.id)
@@ -127,6 +128,7 @@ exports.getNewsBySlugOrId = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "News not found" });
+
     res.status(200).json({ success: true, data: news });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

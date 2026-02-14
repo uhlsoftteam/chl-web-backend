@@ -1,27 +1,12 @@
 const Doctor = require("../models/Doctor");
-const fs = require("fs");
 const { default: mongoose } = require("mongoose");
-const path = require("path");
+const { uploadFileIntoS3 } = require("../services/upload-file/uploadUtility");
 
-const getImagePath = (req) => {
-  return req.file ? `/uploads/doctors/${req.file.filename}` : null;
-};
+// Helper to get extension
+const getExtension = (filename) => filename.split(".").pop().toLowerCase();
 
-// Helper to delete file from filesystem
-const deleteLocalFile = (filePath) => {
-  // 1. Construct the full path on your hard drive
-  // Assuming your structure is: root/public/uploads/...
-  // and this controller is in: root/backend/controllers/
-  const fullPath = path.join(__dirname, "../../public", filePath);
-
-  // 2. Check if file exists and delete it
-  if (fs.existsSync(fullPath)) {
-    fs.unlink(fullPath, (err) => {
-      if (err) console.error("Error deleting file:", err);
-    });
-  }
-};
-
+// @desc    Get all doctors
+// @route   GET /api/doctors
 exports.getDoctors = async (req, res) => {
   try {
     const { department } = req.query;
@@ -36,9 +21,6 @@ exports.getDoctors = async (req, res) => {
         path: "department",
         select: "name slug image",
       })
-      // UPDATED SORTING LOGIC:
-      // 1. First, sort by Priority (1, 2, 3...)
-      // 2. Then, sort by Ranking (1, 2, 3...) for doctors with the SAME priority
       .sort({ priority: 1, ranking: 1 });
 
     res.status(200).json({
@@ -51,11 +33,11 @@ exports.getDoctors = async (req, res) => {
   }
 };
 
+// @desc    Get doctor by ID
+// @route   GET /api/doctors/id/:id
 exports.getDoctorById = async (req, res) => {
   try {
-    // UPDATE: Added .populate()
     const doctor = await Doctor.findById(req.params.id).populate("department");
-
     if (!doctor) {
       return res
         .status(404)
@@ -67,34 +49,23 @@ exports.getDoctorById = async (req, res) => {
   }
 };
 
+// @desc    Get doctor by slug (with ID fallback)
+// @route   GET /api/doctors/:slug
 exports.getDoctorBySlug = async (req, res) => {
   try {
-    const param = req.params.slug;
+    const { slug } = req.params;
 
-    // 1. Extract the last 24 characters (MongoDB ObjectIds are 24 hex chars)
-    // Input: "tunaggina-afrin-khan19-693663696bb6027feee1c318"
-    // Extracted: "693663696bb6027feee1c318"
-    const possibleId = param.slice(-24);
-
-    let doctor = null;
-
-    // 2. If it looks like a valid ID, search by ID first (Most reliable)
-    if (mongoose.isValidObjectId(possibleId)) {
-      doctor = await Doctor.findById(possibleId).populate("department");
-    }
-
-    // 3. Fallback: If not found by ID (or it was a legacy URL), search by exact slug
-    if (!doctor) {
-      doctor = await Doctor.findOne({
-        slug: param,
-        isActive: true,
-      }).populate("department");
-    }
+    // Strict lookup by slug only
+    const doctor = await Doctor.findOne({
+      slug: slug,
+      isActive: true,
+    }).populate("department");
 
     if (!doctor) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Doctor not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found with that slug",
+      });
     }
 
     res.status(200).json({ success: true, data: doctor });
@@ -105,38 +76,28 @@ exports.getDoctorBySlug = async (req, res) => {
 
 // @desc    Create new doctor
 // @route   POST /api/doctors
-// @access  Private (Admin)
 exports.createDoctor = async (req, res) => {
   try {
-    // --- FIX START: Parse stringified arrays/objects from FormData ---
-    // Multipart form-data sends everything as strings. We must parse them back to JSON.
+    const data = { ...req.body };
 
-    if (req.body.schedules && typeof req.body.schedules === "string") {
-      req.body.schedules = JSON.parse(req.body.schedules);
-    }
+    // Parse stringified arrays from FormData
+    ["schedules", "degrees", "experience", "seo"].forEach((field) => {
+      if (data[field] && typeof data[field] === "string") {
+        data[field] = JSON.parse(data[field]);
+      }
+    });
 
-    if (req.body.degrees && typeof req.body.degrees === "string") {
-      req.body.degrees = JSON.parse(req.body.degrees);
-    }
-
-    if (req.body.experience && typeof req.body.experience === "string") {
-      req.body.experience = JSON.parse(req.body.experience);
-    }
-
-    if (req.body.seo && typeof req.body.seo === "string") {
-      req.body.seo = JSON.parse(req.body.seo);
-    }
-    // --- FIX END ---
-
-    // IF a file was uploaded, set the image field in req.body
+    // Handle S3 Upload
     if (req.file) {
-      req.body.image = getImagePath(req);
+      const extension = getExtension(req.file.originalname);
+      // Passing the buffer directly to your S3 utility
+      data.image = await uploadFileIntoS3(req.file.buffer, extension);
     }
 
-    const doctor = await Doctor.create(req.body);
+    const doctor = await Doctor.create(data);
     res.status(201).json({ success: true, data: doctor });
   } catch (error) {
-    if (error.code === 11000 && error.keyPattern.slug) {
+    if (error.code === 11000) {
       return res.status(400).json({
         success: false,
         error: "A doctor with this name/slug already exists.",
@@ -148,41 +109,27 @@ exports.createDoctor = async (req, res) => {
 
 // @desc    Update doctor
 // @route   PUT /api/doctors/:id
-// @access  Private (Admin)
 exports.updateDoctor = async (req, res) => {
   try {
-    let newData = { ...req.body };
+    let data = { ...req.body };
 
-    // --- FIX START: Parse stringified arrays/objects ---
-    if (newData.schedules && typeof newData.schedules === "string") {
-      newData.schedules = JSON.parse(newData.schedules);
-    }
-    if (newData.degrees && typeof newData.degrees === "string") {
-      newData.degrees = JSON.parse(newData.degrees);
-    }
-    if (newData.experience && typeof newData.experience === "string") {
-      newData.experience = JSON.parse(newData.experience);
-    }
-    if (newData.seo && typeof newData.seo === "string") {
-      newData.seo = JSON.parse(newData.seo);
-    }
-    // --- FIX END ---
-
-    // 1. If a NEW image is uploaded
-    if (req.file) {
-      newData.image = `/uploads/doctors/${req.file.filename}`;
-
-      const oldDoctor = await Doctor.findById(req.params.id);
-      if (
-        oldDoctor &&
-        oldDoctor.image &&
-        !oldDoctor.image.includes("default-doctor.jpg")
-      ) {
-        deleteLocalFile(oldDoctor.image);
+    // Parse stringified arrays
+    ["schedules", "degrees", "experience", "seo"].forEach((field) => {
+      if (data[field] && typeof data[field] === "string") {
+        data[field] = JSON.parse(data[field]);
       }
+    });
+
+    // Handle New Image Upload to S3
+    if (req.file) {
+      const extension = getExtension(req.file.originalname);
+      data.image = await uploadFileIntoS3(req.file.buffer, extension);
+
+      // Note: We no longer call deleteLocalFile.
+      // If you want to delete from S3, you'd implement a deleteS3Object(oldUrl) helper.
     }
 
-    const doctor = await Doctor.findByIdAndUpdate(req.params.id, newData, {
+    const doctor = await Doctor.findByIdAndUpdate(req.params.id, data, {
       new: true,
       runValidators: true,
     });
@@ -200,7 +147,6 @@ exports.updateDoctor = async (req, res) => {
 
 // @desc    Delete doctor
 // @route   DELETE /api/doctors/:id
-// @access  Private (Admin)
 exports.deleteDoctor = async (req, res) => {
   try {
     const doctor = await Doctor.findById(req.params.id);
@@ -210,92 +156,62 @@ exports.deleteDoctor = async (req, res) => {
         .json({ success: false, message: "Doctor not found" });
     }
 
-    // 1. Delete the image file associated with this doctor
-    if (doctor.image && !doctor.image.includes("default-doctor.jpg")) {
-      deleteLocalFile(doctor.image);
-    }
+    // In S3 architecture, we usually leave the image or use a Lifecycle policy,
+    // but if you have a deleteS3Object function, call it here using doctor.image.
 
-    // 2. Delete the database record
     await doctor.deleteOne();
-
     res.status(200).json({ success: true, message: "Doctor deleted" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
+// @desc    Reorder Doctors (Bulk Ranking)
 exports.reorderDoctors = async (req, res) => {
   try {
     const { orderedIds } = req.body;
-
-    if (!orderedIds || !Array.isArray()) {
+    if (!orderedIds || !Array.isArray(orderedIds)) {
       return res.status(400).json({
         success: false,
         message: "Please provide an array of ordered IDs",
       });
     }
 
-    // Prepare bulk write operations
-    // We map through the IDs. The index in the array becomes the new 'ranking'.
-    // We add 1 to index so ranking starts at 1, not 0.
-    const bulkOps = orderedIds.map((id, index) => {
-      return {
-        updateOne: {
-          filter: { _id: id },
-          update: { $set: { ranking: index + 1 } },
-        },
-      };
-    });
+    const bulkOps = orderedIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { $set: { ranking: index + 1 } },
+      },
+    }));
 
-    // Execute all updates in a single database command
     await Doctor.bulkWrite(bulkOps);
-
-    res.status(200).json({
-      success: true,
-      message: "Doctors reordered successfully",
-    });
+    res
+      .status(200)
+      .json({ success: true, message: "Doctors reordered successfully" });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
+// @desc    Seed Doctors
 exports.seedDoctors = async (req, res) => {
   try {
-    // 1. You can either read from the JSON file created in step 2:
-    // const data = JSON.parse(
-    //   fs.readFileSync(path.join(__dirname, '../data/departments.json'), 'utf-8')
-    // );
-
-    // 2. OR you can just accept the array via the Request Body (Postman):
     const data = req.body;
-
     if (!Array.isArray(data) || data.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide an array of doctors",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Provide an array of doctors" });
     }
 
-    // Option: Clear existing departments to avoid duplicate key errors?
-    // await Department.deleteMany({});
-
-    // Use insertMany for bulk creation
-    // ordered: false ensures that if one fails (e.g. duplicate), the others still insert
-    const docotrs = await Doctor.insertMany(data, { ordered: false });
-
-    res.status(201).json({
-      success: true,
-      count: docotrs.length,
-      data: docotrs,
-    });
+    const doctors = await Doctor.insertMany(data, { ordered: false });
+    res
+      .status(201)
+      .json({ success: true, count: doctors.length, data: doctors });
   } catch (error) {
-    // Check if error is due to duplicates (code 11000)
     if (error.code === 11000 || error.writeErrors) {
-      // If using insertMany with ordered:false, Mongoose throws an error containing the inserted docs and the errors
       return res.status(207).json({
         success: true,
-        message: "Process completed with some duplicate errors skipped.",
+        message: "Process completed with some duplicates skipped.",
         inserted: error.insertedDocs ? error.insertedDocs.length : "Unknown",
       });
     }
@@ -303,101 +219,60 @@ exports.seedDoctors = async (req, res) => {
   }
 };
 
-// ... existing code ...
-
-// @desc    Global Search Doctors (Name, Designation, Department Name)
-// @route   GET /api/doctors/search
-// @access  Public
+// @desc    Global Search Doctors
 exports.searchDoctors = async (req, res) => {
   try {
     const { query } = req.query;
+    if (!query)
+      return res
+        .status(400)
+        .json({ success: false, message: "Query is required" });
 
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a search query",
-      });
-    }
-
-    // 1. Find Departments that match the search term first
-    // (We need this to search doctors by "Department Name")
-    // We use mongoose.model("Department") to avoid circular dependency issues if you haven't imported it
     const Department = mongoose.model("Department");
-
-    const matchingDepartments = await Department.find({
-      name: { $regex: query, $options: "i" }, // 'i' = case insensitive
+    const matchingDepts = await Department.find({
+      name: { $regex: query, $options: "i" },
     }).select("_id");
 
-    const matchingDeptIds = matchingDepartments.map((dept) => dept._id);
-
-    // 2. Find Doctors matching Name, Designation, OR the Department IDs found above
     const doctors = await Doctor.find({
-      isActive: true, // Only show active doctors
+      isActive: true,
       $or: [
-        // Match Name
         { name: { $regex: query, $options: "i" } },
-        // Match Designation
         { designation: { $regex: query, $options: "i" } },
-        // Match Degrees (Optional: if you want to search 'MBBS' etc)
         { degrees: { $regex: query, $options: "i" } },
-        // Match Department ID (from the department name search above)
-        { department: { $in: matchingDeptIds } },
+        { department: { $in: matchingDepts.map((d) => d._id) } },
       ],
     })
-      .populate({
-        path: "department",
-        select: "name slug image",
-      })
-      .sort({ priority: 1, ranking: 1 }); // Maintain your sort order
+      .populate("department")
+      .sort({ priority: 1, ranking: 1 });
 
-    res.status(200).json({
-      success: true,
-      count: doctors.length,
-      data: doctors,
-    });
+    res
+      .status(200)
+      .json({ success: true, count: doctors.length, data: doctors });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-// @desc    Bulk Update Doctors (Add Introduction, Academic, Experience)
-// @route   POST /api/doctors/bulk-update
-// @access  Private (Admin)
+// @desc    Bulk Update
 exports.bulkUpdateDoctors = async (req, res) => {
   try {
     const updates = req.body;
-
-    if (!Array.isArray(updates) || updates.length === 0) {
+    if (!Array.isArray(updates))
       return res
         .status(400)
-        .json({ success: false, message: "Provide an array of updates" });
-    }
+        .json({ success: false, message: "Array required" });
 
-    const bulkOps = updates.map((doc) => {
-      const updateData = {};
-      if (doc.introduction !== undefined)
-        updateData.introduction = doc.introduction;
-      if (doc.academic !== undefined) updateData.academic = doc.academic;
-      if (doc.experience !== undefined) updateData.experience = doc.experience;
-
-      // ADD THESE TWO LINES:
-      if (doc.department !== undefined) updateData.department = doc.department;
-      if (doc.location !== undefined) updateData.location = doc.location;
-
-      return {
-        updateOne: {
-          filter: { _id: doc._id },
-          update: { $set: updateData },
-        },
-      };
-    });
+    const bulkOps = updates.map((doc) => ({
+      updateOne: {
+        filter: { _id: doc._id },
+        update: { $set: doc },
+      },
+    }));
 
     const result = await Doctor.bulkWrite(bulkOps);
-
-    res.status(200).json({
-      success: true,
-      message: `${result.modifiedCount} doctors updated successfully`,
-    });
+    res
+      .status(200)
+      .json({ success: true, message: `${result.modifiedCount} updated` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

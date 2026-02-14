@@ -1,27 +1,13 @@
 const ClinicAndCenter = require("../models/ClinicAndCenter");
-const fs = require("fs");
-const path = require("path");
+const { uploadFileIntoS3 } = require("../services/upload-file/uploadUtility");
 
-// Helper to get image path
-const getImagePath = (req) => {
-  return req.file ? `/uploads/centers/${req.file.filename}` : null;
-};
-
-// Helper to delete file from filesystem
-const deleteLocalFile = (filePath) => {
-  const fullPath = path.join(__dirname, "../../public", filePath);
-  if (fs.existsSync(fullPath)) {
-    fs.unlink(fullPath, (err) => {
-      if (err) console.error("Error deleting file:", err);
-    });
-  }
-};
+// Helper to get extension
+const getExtension = (filename) => filename.split(".").pop().toLowerCase();
 
 // @desc    Get all clinics/centers
 // @route   GET /api/clinics-and-centers
 exports.getClinicsAndCenters = async (req, res) => {
   try {
-    // Change 'department' to 'departments'
     const centers = await ClinicAndCenter.find({ isActive: true }).populate(
       "departments",
       "name slug"
@@ -40,7 +26,7 @@ exports.getCenterBySlug = async (req, res) => {
   try {
     const center = await ClinicAndCenter.findOne({
       slug: req.params.slug,
-    }).populate("departments", "name slug"); // CHANGED from department to departments
+    }).populate("departments", "name slug");
 
     if (!center) {
       return res
@@ -57,16 +43,20 @@ exports.getCenterBySlug = async (req, res) => {
 // @route   POST /api/clinics-and-centers
 exports.createCenter = async (req, res) => {
   try {
-    // Parse keywords or SEO if they come as stringified JSON from FormData
-    if (req.body.keywords && typeof req.body.keywords === "string") {
-      req.body.keywords = JSON.parse(req.body.keywords);
+    const data = { ...req.body };
+
+    // 1. Handle JSON parsing for keywords
+    if (data.keywords && typeof data.keywords === "string") {
+      data.keywords = JSON.parse(data.keywords);
     }
 
+    // 2. Handle S3 Upload
     if (req.file) {
-      req.body.image = getImagePath(req);
+      const extension = getExtension(req.file.originalname);
+      data.image = await uploadFileIntoS3(req.file.buffer, extension);
     }
 
-    const center = await ClinicAndCenter.create(req.body);
+    const center = await ClinicAndCenter.create(data);
     res.status(201).json({ success: true, data: center });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -77,25 +67,24 @@ exports.createCenter = async (req, res) => {
 // @route   PUT /api/clinics-and-centers/:id
 exports.updateCenter = async (req, res) => {
   try {
-    let newData = { ...req.body };
+    let data = { ...req.body };
 
-    if (newData.keywords && typeof newData.keywords === "string") {
-      newData.keywords = JSON.parse(newData.keywords);
+    // 1. Handle JSON parsing for keywords
+    if (data.keywords && typeof data.keywords === "string") {
+      data.keywords = JSON.parse(data.keywords);
     }
 
+    // 2. Handle New Image Upload to S3
     if (req.file) {
-      newData.image = `/uploads/centers/${req.file.filename}`;
+      const extension = getExtension(req.file.originalname);
+      data.image = await uploadFileIntoS3(req.file.buffer, extension);
 
-      // Delete old image
-      const oldCenter = await ClinicAndCenter.findById(req.params.id);
-      if (oldCenter?.image && !oldCenter.image.includes("default-center.jpg")) {
-        deleteLocalFile(oldCenter.image);
-      }
+      // Note: We no longer call deleteLocalFile.
     }
 
     const center = await ClinicAndCenter.findByIdAndUpdate(
       req.params.id,
-      newData,
+      data,
       {
         new: true,
         runValidators: true,
@@ -124,10 +113,7 @@ exports.deleteCenter = async (req, res) => {
         .json({ success: false, message: "Center not found" });
     }
 
-    if (center.image && !center.image.includes("default-center.jpg")) {
-      deleteLocalFile(center.image);
-    }
-
+    // Image cleanup would happen here if a deleteS3Object utility is implemented
     await center.deleteOne();
     res.status(200).json({ success: true, message: "Center deleted" });
   } catch (error) {
@@ -135,6 +121,7 @@ exports.deleteCenter = async (req, res) => {
   }
 };
 
+// @desc    Seed centers
 exports.seedClinicsAndCenters = async (req, res) => {
   try {
     const data = req.body;
@@ -145,7 +132,6 @@ exports.seedClinicsAndCenters = async (req, res) => {
         .json({ success: false, message: "Provide an array" });
     }
 
-    // Manually generate slugs because insertMany skips pre-save hooks
     const preparedData = data.map((item) => ({
       ...item,
       slug: item.title

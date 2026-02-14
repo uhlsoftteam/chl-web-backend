@@ -20,7 +20,6 @@ const departmentSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      default: "default-department.jpg",
     },
     isActive: {
       type: Boolean,

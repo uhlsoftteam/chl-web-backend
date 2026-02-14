@@ -1,12 +1,15 @@
 const Blog = require("../models/Blog");
+const { uploadFileIntoS3 } = require("../services/upload-file/uploadUtility");
+
+// Helper to get extension
+const getExtension = (filename) => filename.split(".").pop().toLowerCase();
 
 // @desc    Get all published blogs
 // @route   GET /api/blogs
-// @access  Public
 exports.getBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find({ status: "published" })
-      .populate("author", "name email") // Show author details
+      .populate("author", "name email")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: blogs.length, data: blogs });
@@ -17,19 +20,18 @@ exports.getBlogs = async (req, res) => {
 
 // @desc    Get single blog by Slug
 // @route   GET /api/blogs/:slug
-// @access  Public
 exports.getBlogBySlug = async (req, res) => {
   try {
     const blog = await Blog.findOne({ slug: req.params.slug }).populate(
       "author",
       "name"
     );
-    console.log(blog);
 
     if (!blog)
       return res
         .status(404)
         .json({ success: false, message: "Blog not found" });
+
     res.status(200).json({ success: true, data: blog });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -38,23 +40,26 @@ exports.getBlogBySlug = async (req, res) => {
 
 // @desc    Create blog post
 // @route   POST /api/blogs
-// @access  Private (Admin)
 exports.createBlog = async (req, res) => {
   try {
-    // 1. Check if file exists and add path to body
+    const data = { ...req.body };
+
+    // 1. Handle S3 Image Upload
     if (req.file) {
-      // Adjusted to match your static folder config
-      req.body.coverImage = `/uploads/blogs/${req.file.filename}`;
+      const extension = getExtension(req.file.originalname);
+      data.coverImage = await uploadFileIntoS3(req.file.buffer, extension);
     }
 
     // 2. Parse JSON strings back into objects/arrays
-    if (req.body.tags) req.body.tags = JSON.parse(req.body.tags);
-    if (req.body.seo) req.body.seo = JSON.parse(req.body.seo);
+    if (data.tags && typeof data.tags === "string")
+      data.tags = JSON.parse(data.tags);
+    if (data.seo && typeof data.seo === "string")
+      data.seo = JSON.parse(data.seo);
 
-    // 3. Set the author (This was where it crashed because req.body was undefined)
-    req.body.author = req.user.id;
+    // 3. Set the author from the authenticated user
+    data.author = req.user.id;
 
-    const blog = await Blog.create(req.body);
+    const blog = await Blog.create(data);
     res.status(201).json({ success: true, data: blog });
   } catch (error) {
     console.error(error);
@@ -64,9 +69,9 @@ exports.createBlog = async (req, res) => {
 
 // @desc    Update blog post
 // @route   PUT /api/blogs/:id
-// @access  Private (Admin)
 exports.updateBlog = async (req, res) => {
   try {
+    const data = { ...req.body };
     let blog = await Blog.findById(req.params.id);
 
     if (!blog) {
@@ -75,34 +80,30 @@ exports.updateBlog = async (req, res) => {
         .json({ success: false, message: "Blog not found" });
     }
 
-    // 1. Handle New Image Upload
+    // 1. Handle New S3 Image Upload
     if (req.file) {
-      // If a new file is uploaded, update the path
-      req.body.coverImage = `/uploads/blogs/${req.file.filename}`;
-
-      // OPTIONAL: You could add logic here to delete the OLD file from
-      // the filesystem using the 'fs' module to save server space.
+      const extension = getExtension(req.file.originalname);
+      data.coverImage = await uploadFileIntoS3(req.file.buffer, extension);
     }
 
     // 2. Parse JSON strings (tags and seo)
-    if (req.body.tags) {
+    if (data.tags && typeof data.tags === "string") {
       try {
-        req.body.tags = JSON.parse(req.body.tags);
+        data.tags = JSON.parse(data.tags);
       } catch (e) {
-        // Fallback if it's already an array or malformed
+        /* ignore */
       }
     }
-
-    if (req.body.seo) {
+    if (data.seo && typeof data.seo === "string") {
       try {
-        req.body.seo = JSON.parse(req.body.seo);
+        data.seo = JSON.parse(data.seo);
       } catch (e) {
-        // Fallback
+        /* ignore */
       }
     }
 
     // 3. Update the document
-    blog = await Blog.findByIdAndUpdate(req.params.id, req.body, {
+    blog = await Blog.findByIdAndUpdate(req.params.id, data, {
       new: true,
       runValidators: true,
     });
@@ -116,7 +117,6 @@ exports.updateBlog = async (req, res) => {
 
 // @desc    Delete blog post
 // @route   DELETE /api/blogs/:id
-// @access  Private (Admin)
 exports.deleteBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -124,6 +124,7 @@ exports.deleteBlog = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Blog not found" });
+
     await blog.deleteOne();
     res.status(200).json({ success: true, message: "Blog post removed" });
   } catch (error) {
@@ -133,7 +134,6 @@ exports.deleteBlog = async (req, res) => {
 
 // @desc    Get single blog by ID
 // @route   GET /api/blogs/id/:id
-// @access  Public (or Private depending on your need)
 exports.getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id).populate(
@@ -149,7 +149,6 @@ exports.getBlogById = async (req, res) => {
 
     res.status(200).json({ success: true, data: blog });
   } catch (error) {
-    // Check if the error is a CastError (invalid MongoDB ID)
     if (error.kind === "ObjectId") {
       return res
         .status(404)

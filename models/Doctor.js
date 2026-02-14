@@ -33,6 +33,7 @@ const doctorSchema = new mongoose.Schema(
       type: String,
       lowercase: true,
       index: true,
+      unique: true,
     },
     priority: {
       type: Number,
