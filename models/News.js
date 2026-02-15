@@ -6,7 +6,7 @@ const newsSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please add a headline"],
       trim: true,
-      maxlength: [100, "Headline cannot be more than 100 characters"],
+      maxlength: [150, "Headline cannot be more than 100 characters"],
     },
     // NEW: Type of news
     contentType: {

@@ -26,7 +26,7 @@ exports.getCenterBySlug = async (req, res) => {
   try {
     const center = await ClinicAndCenter.findOne({
       slug: req.params.slug,
-    }).populate("departments", "name slug");
+    }).populate("departments");
 
     if (!center) {
       return res
@@ -40,14 +40,18 @@ exports.getCenterBySlug = async (req, res) => {
 };
 
 // @desc    Create center
-// @route   POST /api/clinics-and-centers
 exports.createCenter = async (req, res) => {
   try {
     const data = { ...req.body };
 
-    // 1. Handle JSON parsing for keywords
+    // 1. Handle JSON parsing for keywords AND departments
     if (data.keywords && typeof data.keywords === "string") {
       data.keywords = JSON.parse(data.keywords);
+    }
+
+    // ADD THIS BLOCK
+    if (data.departments && typeof data.departments === "string") {
+      data.departments = JSON.parse(data.departments);
     }
 
     // 2. Handle S3 Upload
@@ -64,22 +68,24 @@ exports.createCenter = async (req, res) => {
 };
 
 // @desc    Update center
-// @route   PUT /api/clinics-and-centers/:id
 exports.updateCenter = async (req, res) => {
   try {
     let data = { ...req.body };
 
-    // 1. Handle JSON parsing for keywords
+    // 1. Handle JSON parsing for keywords AND departments
     if (data.keywords && typeof data.keywords === "string") {
       data.keywords = JSON.parse(data.keywords);
+    }
+
+    // ADD THIS BLOCK
+    if (data.departments && typeof data.departments === "string") {
+      data.departments = JSON.parse(data.departments);
     }
 
     // 2. Handle New Image Upload to S3
     if (req.file) {
       const extension = getExtension(req.file.originalname);
       data.image = await uploadFileIntoS3(req.file.buffer, extension);
-
-      // Note: We no longer call deleteLocalFile.
     }
 
     const center = await ClinicAndCenter.findByIdAndUpdate(

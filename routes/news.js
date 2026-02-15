@@ -9,6 +9,7 @@ const {
 
 const { protect, isAdmin } = require("../middleware/isAdmin");
 const upload = require("../middleware/uploadMiddleware");
+const { compressImage } = require("../utils/compressor");
 
 const router = express.Router();
 
@@ -19,8 +20,22 @@ router.get("/:id", getNewsBySlugOrId);
 
 // Admin only routes
 // Middleware: verify user -> check admin status -> process file upload
-router.post("/", protect, isAdmin, upload.single("coverImage"), createNews);
-router.put("/:id", protect, isAdmin, upload.single("coverImage"), updateNews);
+router.post(
+  "/",
+  protect,
+  isAdmin,
+  upload.single("coverImage"),
+  compressImage,
+  createNews
+);
+router.put(
+  "/:id",
+  protect,
+  isAdmin,
+  upload.single("coverImage"),
+  compressImage,
+  updateNews
+);
 router.delete("/:id", protect, isAdmin, deleteNews);
 
 module.exports = router;

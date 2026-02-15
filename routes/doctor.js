@@ -10,16 +10,19 @@ const {
   seedDoctors,
   searchDoctors,
   bulkUpdateDoctors,
+  getDoctorsByDepartment,
 } = require("../controllers/DoctorController");
 
 const { protect, isAdmin } = require("../middleware/isAdmin");
 const upload = require("../middleware/uploadMiddleware");
+const { compressImage } = require("../utils/compressor");
 
 const router = express.Router();
 
 // --- Public Routes ---
 router.get("/", getDoctors);
 router.get("/search", searchDoctors); // Must be above /:slug
+router.get("/department/:deptId", getDoctorsByDepartment);
 router.get("/:slug", getDoctorBySlug);
 router.get("/id/:id", getDoctorById); // Added a specific path for ID if needed
 
@@ -27,9 +30,23 @@ router.get("/id/:id", getDoctorById); // Added a specific path for ID if needed
 // Use .all or apply middleware to a group if you prefer,
 // but sticking to your current style:
 
-router.post("/", protect, isAdmin, upload.single("image"), createDoctor);
+router.post(
+  "/",
+  protect,
+  isAdmin,
+  upload.single("image"),
+  compressImage,
+  createDoctor
+);
 
-router.put("/:id", protect, isAdmin, upload.single("image"), updateDoctor);
+router.put(
+  "/:id",
+  protect,
+  isAdmin,
+  upload.single("image"),
+  compressImage,
+  updateDoctor
+);
 
 router.delete("/:id", protect, isAdmin, deleteDoctor);
 router.patch("/reorder", protect, isAdmin, reorderDoctors);

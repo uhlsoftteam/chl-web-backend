@@ -18,6 +18,7 @@ const departmentRoutes = require("./routes/department");
 const packageRoutes = require("./routes/package");
 const appointmentRoutes = require("./routes/appointment");
 const clinicAndCenterRoutes = require("./routes/clinicAndCenters");
+const boardMemberRoutes = require("./routes/boardMember");
 const connectDB = require("./db/connectDB");
 
 const app = express();
@@ -41,6 +42,7 @@ app.use("/api/departments", departmentRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/clinics-and-centers", clinicAndCenterRoutes);
+app.use("/api/board-members", boardMemberRoutes);
 
 // Base route
 // comment this , only for testing
@@ -52,17 +54,17 @@ app.get("/api/hello", (req, res) => {
 });
 
 app.use(async (req, res, next) => {
-    next(createError.NotFound("This route does not exist!"));
+  next(createError.NotFound("This route does not exist!"));
 });
 
 app.use((err, req, res, next) => {
-    res.status(err.status || 500);
-    res.send({
-        error: {
-            status: err.status || 500,
-            message: err.message,
-        },
-    });
+  res.status(err.status || 500);
+  res.send({
+    error: {
+      status: err.status || 500,
+      message: err.message,
+    },
+  });
 });
 // Wrap the app with serverless-http middleware for serverless deployment
 module.exports.handler = serverless(app);

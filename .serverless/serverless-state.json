@@ -14,8 +14,21 @@
         "multipart/form-data"
       ],
       "environment": {
-        "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority"
+        "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority",
+        "S3_BUCKET_NAME": "ch-file-bucket",
+        "S3_BUCKET_LOCATION": "https://ch-file-bucket.s3.ap-southeast-1.amazonaws.com/",
+        "SINGLE_IMAGE_UPLOAD_LIMIT": "5"
       },
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ses:SendEmail",
+            "s3:*"
+          ],
+          "Resource": "arn:aws:s3:::ch-file-bucket/*"
+        }
+      ],
       "versionFunctions": true,
       "compiledCloudFormationTemplate": {
         "AWSTemplateFormatVersion": "2010-09-09",
@@ -25,6 +38,12 @@
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
               "LogGroupName": "/aws/lambda/chl-backend-dev-app"
+            }
+          },
+          "UploadFileSingleLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/chl-backend-dev-uploadFileSingle"
             }
           },
           "IamRoleLambdaExecution": {
@@ -84,6 +103,9 @@
                             "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/chl-backend-dev*:*:*"
                           }
                         ]
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][0]"
                       }
                     ]
                   }
@@ -110,7 +132,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
-                "S3Key": "serverless/chl-backend/dev/1770461488365-2026-02-07T10:51:28.365Z/chl-backend.zip"
+                "S3Key": "serverless/chl-backend/dev/1771069713281-2026-02-14T11:48:33.281Z/chl-backend.zip"
               },
               "Handler": "app.handler",
               "Runtime": "nodejs20.x",
@@ -119,7 +141,10 @@
               "Timeout": 30,
               "Environment": {
                 "Variables": {
-                  "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority"
+                  "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority",
+                  "S3_BUCKET_NAME": "ch-file-bucket",
+                  "S3_BUCKET_LOCATION": "https://ch-file-bucket.s3.ap-southeast-1.amazonaws.com/",
+                  "SINGLE_IMAGE_UPLOAD_LIMIT": "5"
                 }
               },
               "Role": {
@@ -133,14 +158,55 @@
               "AppLogGroup"
             ]
           },
-          "AppLambdaVersionHq8ZNiz5WDJ1OqRnfp2DOtD4ZnwtZPSXNAibCPMbmc": {
+          "UploadFileSingleLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-eu-north-1-dfcb9520-51b5",
+                "S3Key": "serverless/chl-backend/dev/1771069713281-2026-02-14T11:48:33.281Z/chl-backend.zip"
+              },
+              "Handler": "services/upload-file/uploadSingleFile.handler",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "chl-backend-dev-uploadFileSingle",
+              "MemorySize": 1024,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "MONGODB_URI": "mongodb+srv://mycontinentalhospital_db_user:hjv0rktJg325MnP6@cluster-production.nwctyx6.mongodb.net/CHL_Production?retryWrites=true&w=majority",
+                  "S3_BUCKET_NAME": "ch-file-bucket",
+                  "S3_BUCKET_LOCATION": "https://ch-file-bucket.s3.ap-southeast-1.amazonaws.com/",
+                  "SINGLE_IMAGE_UPLOAD_LIMIT": "5"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "UploadFileSingleLogGroup"
+            ]
+          },
+          "AppLambdaVersionwQktbZi3ULRDRIWMhJjXAbmzdLSYetzT0iBfDlAPpE": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AppLambdaFunction"
               },
-              "CodeSha256": "AAGxzYRxEYvf79tFPOLdYE+QC92nV/AuzRpdN+6Kmds="
+              "CodeSha256": "FL32lfIjOLORbCiFi//c+sC22DxQlx5m1MxD4VJ82DA="
+            }
+          },
+          "UploadFileSingleLambdaVersiondbFRMnWsSJcxJqcYpaVSn5O0cRjR45ine9HmTqtZg": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "UploadFileSingleLambdaFunction"
+              },
+              "CodeSha256": "FL32lfIjOLORbCiFi//c+sC22DxQlx5m1MxD4VJ82DA="
             }
           },
           "ApiGatewayRestApi": {
@@ -165,6 +231,45 @@
                 ]
               },
               "PathPart": "{proxy+}",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceUpload": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "upload",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceUploadSingle": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceUpload"
+              },
+              "PathPart": "single",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceUploadSingleFiletypeVar": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceUploadSingle"
+              },
+              "PathPart": "{fileType}",
               "RestApiId": {
                 "Ref": "ApiGatewayRestApi"
               }
@@ -257,6 +362,51 @@
               },
               "ResourceId": {
                 "Ref": "ApiGatewayResourceProxyVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodUploadSingleFiletypeVarOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'*'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": ""
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceUploadSingleFiletypeVar"
               },
               "RestApiId": {
                 "Ref": "ApiGatewayRestApi"
@@ -358,7 +508,53 @@
               "AppLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1770461472606": {
+          "ApiGatewayMethodUploadSingleFiletypeVarPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceUploadSingleFiletypeVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "UploadFileSingleLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "UploadFileSingleLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayDeployment1771069694684": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -369,8 +565,10 @@
             "DependsOn": [
               "ApiGatewayMethodOptions",
               "ApiGatewayMethodProxyVarOptions",
+              "ApiGatewayMethodUploadSingleFiletypeVarOptions",
               "ApiGatewayMethodAny",
-              "ApiGatewayMethodProxyVarAny"
+              "ApiGatewayMethodProxyVarAny",
+              "ApiGatewayMethodUploadSingleFiletypeVarPost"
             ]
           },
           "AppLambdaPermissionApiGateway": {
@@ -379,6 +577,43 @@
               "FunctionName": {
                 "Fn::GetAtt": [
                   "AppLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "UploadFileSingleLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "UploadFileSingleLambdaFunction",
                   "Arn"
                 ]
               },
@@ -421,10 +656,19 @@
           "AppLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppLambdaVersionHq8ZNiz5WDJ1OqRnfp2DOtD4ZnwtZPSXNAibCPMbmc"
+              "Ref": "AppLambdaVersionwQktbZi3ULRDRIWMhJjXAbmzdLSYetzT0iBfDlAPpE"
             },
             "Export": {
               "Name": "sls-chl-backend-dev-AppLambdaFunctionQualifiedArn"
+            }
+          },
+          "UploadFileSingleLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "UploadFileSingleLambdaVersiondbFRMnWsSJcxJqcYpaVSn5O0cRjR45ine9HmTqtZg"
+            },
+            "Export": {
+              "Name": "sls-chl-backend-dev-UploadFileSingleLambdaFunctionQualifiedArn"
             }
           },
           "ServiceEndpoint": {
@@ -531,7 +775,43 @@
         "timeout": 30,
         "runtime": "nodejs20.x",
         "vpc": {},
-        "versionLogicalId": "AppLambdaVersionHq8ZNiz5WDJ1OqRnfp2DOtD4ZnwtZPSXNAibCPMbmc"
+        "versionLogicalId": "AppLambdaVersionwQktbZi3ULRDRIWMhJjXAbmzdLSYetzT0iBfDlAPpE"
+      },
+      "uploadFileSingle": {
+        "handler": "services/upload-file/uploadSingleFile.handler",
+        "events": [
+          {
+            "http": {
+              "path": "upload/single/{fileType}",
+              "method": "post",
+              "cors": {
+                "origin": "*",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent",
+                  "X-Amzn-Trace-Id"
+                ],
+                "allowCredentials": false
+              },
+              "integration": "AWS_PROXY"
+            }
+          }
+        ],
+        "name": "chl-backend-dev-uploadFileSingle",
+        "package": {},
+        "memory": 1024,
+        "timeout": 30,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "UploadFileSingleLambdaVersiondbFRMnWsSJcxJqcYpaVSn5O0cRjR45ine9HmTqtZg"
       }
     },
     "configValidationMode": "warn",
@@ -558,7 +838,7 @@
     "artifact": "C:\\Users\\Administrator\\OneDrive\\Desktop\\continental-backend\\.serverless\\chl-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/chl-backend/dev/1770461488365-2026-02-07T10:51:28.365Z",
+    "artifactDirectoryName": "serverless/chl-backend/dev/1771069713281-2026-02-14T11:48:33.281Z",
     "artifact": "chl-backend.zip"
   }
 }

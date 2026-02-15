@@ -277,3 +277,36 @@ exports.bulkUpdateDoctors = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// @desc    Get doctors by Department ID
+// @route   GET /api/doctors/department/:deptId
+exports.getDoctorsByDepartment = async (req, res) => {
+  try {
+    const { deptId } = req.params;
+
+    // Validate if the ID is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(deptId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Department ID" });
+    }
+
+    const doctors = await Doctor.find({
+      department: deptId,
+      isActive: true,
+    })
+      .populate({
+        path: "department",
+        select: "name slug image",
+      })
+      .sort({ priority: 1, ranking: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: doctors.length,
+      data: doctors,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

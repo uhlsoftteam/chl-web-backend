@@ -10,6 +10,7 @@ const {
 
 const { protect, isAdmin } = require("../middleware/isAdmin");
 const upload = require("../middleware/uploadMiddleware");
+const { compressImage } = require("../utils/compressor");
 
 const router = express.Router();
 
@@ -19,8 +20,22 @@ router.get("/:slug", getBlogBySlug);
 router.get("/id/:id", getBlogById);
 
 // Admin only routes
-router.post("/", protect, isAdmin, upload.single("coverImage"), createBlog);
-router.put("/:id", protect, isAdmin, upload.single("coverImage"), updateBlog);
+router.post(
+  "/",
+  protect,
+  isAdmin,
+  upload.single("coverImage"),
+  compressImage,
+  createBlog
+);
+router.put(
+  "/:id",
+  protect,
+  isAdmin,
+  upload.single("coverImage"),
+  compressImage,
+  updateBlog
+);
 router.delete("/:id", protect, isAdmin, deleteBlog);
 
 module.exports = router;

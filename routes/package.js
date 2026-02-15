@@ -8,6 +8,7 @@ const {
   seedPackages,
   searchPackages,
 } = require("../controllers/PackageController");
+const { compressImage } = require("../utils/compressor");
 
 const router = express.Router();
 
@@ -18,8 +19,12 @@ router.route("/:slug").get(getPackageBySlug);
 
 // Protected routes with Image Upload
 // "packageImage" must match the key used in your Postman/Frontend FormData
-router.route("/").post(upload.single("packageImage"), createPackage);
-router.route("/:id").put(upload.single("packageImage"), updatePackage);
+router
+  .route("/")
+  .post(upload.single("packageImage"), compressImage, createPackage);
+router
+  .route("/:id")
+  .put(upload.single("packageImage"), compressImage, updatePackage);
 
 router.route("/seed").post(seedPackages);
 
